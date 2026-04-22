@@ -144,6 +144,7 @@ export default function Page() {
   const [step, setStep] = useState(0);
   const [drawn, setDrawn] = useState<Record<string, Card[]>>({});
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const cardBackImage = "/images/card_back.jpg";
 
   const completed = step === LAYERS.length;
   const nextStep = () => {
@@ -170,6 +171,17 @@ export default function Page() {
     });
   }, [step]);
 
+  useEffect(() => {
+    const uniqueImages = Array.from(
+      new Set([...LAYERS.flatMap((layer) => layer.pool.map((card) => card.image)), cardBackImage])
+    );
+
+    uniqueImages.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+
   function renderCards(layerIndex: number) {
     const layer = LAYERS[layerIndex];
     const opened = layerIndex < step;
@@ -177,8 +189,11 @@ export default function Page() {
     if (opened) {
       const cards = drawn[layer.key] ?? [];
       return cards.map((card) => (
-        <div
+        <motion.div
           key={card.id}
+          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
           className="overflow-hidden rounded-lg border border-white/15 bg-slate-950/50 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
         >
           <img
@@ -187,16 +202,18 @@ export default function Page() {
             className="h-[7.2rem] w-[5.2rem] object-cover object-center sm:h-[8.4rem] sm:w-[6rem]"
             loading="lazy"
           />
-        </div>
+        </motion.div>
       ));
     }
 
     return Array.from({ length: layer.drawCount }, (_, placeholderIdx) => (
       <div
         key={`${layer.key}-placeholder-${placeholderIdx}`}
-        className="flex h-[7.2rem] w-[5.2rem] items-center justify-center rounded-lg border border-dashed border-indigo-200/30 bg-slate-950/30 text-[10px] text-indigo-200/45 sm:h-[8.4rem] sm:w-[6rem]"
+        aria-label="card back"
+        className="h-[7.2rem] w-[5.2rem] rounded-lg border border-dashed border-indigo-200/30 bg-slate-950/30 bg-cover bg-center sm:h-[8.4rem] sm:w-[6rem]"
+        style={{ backgroundImage: `url(${cardBackImage})` }}
       >
-        ?
+        <span className="sr-only">Card Back</span>
       </div>
     ));
   }
@@ -306,9 +323,11 @@ export default function Page() {
                 ref={(el) => {
                   layerRefs.current[LAYERS[4].key] = el;
                 }}
-                className="flex justify-center gap-3"
+                className="mx-auto grid w-fit grid-cols-2 gap-3"
               >
-                {renderCards(4)}
+                {renderCards(4)[0]}
+                {renderCards(4)[1]}
+                <div className="col-span-2 -mt-1 flex justify-center">{renderCards(4)[2]}</div>
               </div>
             </motion.div>
 
