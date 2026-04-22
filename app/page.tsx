@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Card = {
   id: string;
@@ -16,6 +16,7 @@ type Layer = {
   meaning: string;
   drawCount: number;
   pool: Card[];
+  triad: [string, string, string];
 };
 
 const ACES: Card[] = [
@@ -44,18 +45,18 @@ const AGENTS: Card[] = [
 ]);
 
 const DESTINY: Card[] = [
-  { id: "adjustment", name: "Adjustment", image: "/images/adjustment.png" },
-  { id: "death", name: "Death", image: "/images/death.png" },
-  { id: "art", name: "Art", image: "/images/art.png" },
-  { id: "chariot", name: "The Chariot", image: "/images/the-chariot.png" },
-  { id: "emperor", name: "The Emperor", image: "/images/the-emperor.png" },
-  { id: "empress", name: "The Empress", image: "/images/the-empress.png" },
-  { id: "hierophant", name: "The Hierophant", image: "/images/the-hierophant.png" },
-  { id: "lovers", name: "The Lovers", image: "/images/the-lovers.png" },
-  { id: "hermit", name: "The Hermit", image: "/images/the-hermit.png" },
-  { id: "star", name: "The Star", image: "/images/the-star.png" },
-  { id: "moon", name: "The Moon", image: "/images/the-moon.png" },
-  { id: "sun", name: "The Sun", image: "/images/the-sun.png" }
+  { id: "aries-emperor", name: "Aries · IV · The Emperor", image: "/images/the-emperor.png" },
+  { id: "taurus-hierophant", name: "Taurus · V · The Hierophant", image: "/images/the-hierophant.png" },
+  { id: "gemini-lovers", name: "Gemini · VI · The Lovers", image: "/images/the-lovers.png" },
+  { id: "cancer-chariot", name: "Cancer · VII · The Chariot", image: "/images/the-chariot.png" },
+  { id: "leo-lust", name: "Leo · XI · Lust", image: "/images/lust.png" },
+  { id: "virgo-hermit", name: "Virgo · IX · The Hermit", image: "/images/the-hermit.png" },
+  { id: "libra-adjustment", name: "Libra · VIII · Adjustment", image: "/images/adjustment.png" },
+  { id: "scorpio-death", name: "Scorpio · XIII · Death", image: "/images/death.png" },
+  { id: "sagittarius-art", name: "Sagittarius · XIV · Art", image: "/images/art.png" },
+  { id: "capricorn-devil", name: "Capricorn · XV · The Devil", image: "/images/the-devil.png" },
+  { id: "aquarius-star", name: "Aquarius · XVII · The Star", image: "/images/the-star.png" },
+  { id: "pisces-moon", name: "Pisces · XVIII · The Moon", image: "/images/the-moon.png" }
 ];
 
 const EVENTS: Card[] = [2, 3, 4, 5, 6, 7, 8, 9, 10].flatMap((num) =>
@@ -67,22 +68,67 @@ const EVENTS: Card[] = [2, 3, 4, 5, 6, 7, 8, 9, 10].flatMap((num) =>
 );
 
 const FOCUS: Card[] = [
-  { id: "sun", name: "Sun (The Sun)", image: "/images/the-sun.png", note: "意志・顕現" },
-  { id: "moon", name: "Moon (The Priestess)", image: "/images/the-priestess.png", note: "直観・受容" },
-  { id: "mars", name: "Mars (The Tower)", image: "/images/the-tower.png", note: "突破・変容" },
-  { id: "mercury", name: "Mercury (The Magus)", image: "/images/the-magus.png", note: "言語化・橋渡し" },
-  { id: "jupiter", name: "Jupiter (Fortune)", image: "/images/fortune.png", note: "拡張・流転" },
-  { id: "venus", name: "Venus (The Empress)", image: "/images/the-empress.png", note: "調和・引力" },
-  { id: "saturn", name: "Saturn (The Universe)", image: "/images/the-universe.png", note: "統合・完成" }
+  { id: "sun", name: "Sun · XIX · The Sun", image: "/images/the-sun.png" },
+  { id: "moon", name: "Moon · II · The High Priestess", image: "/images/the-priestess.png" },
+  { id: "mercury", name: "Mercury · I · The Magus", image: "/images/the-magus.png" },
+  { id: "venus", name: "Venus · III · The Empress", image: "/images/the-empress.png" },
+  { id: "mars", name: "Mars · XVI · The Tower", image: "/images/the-tower.png" },
+  { id: "jupiter", name: "Jupiter · X · Fortune", image: "/images/fortune.png" },
+  { id: "saturn", name: "Saturn · XXI · The Universe", image: "/images/the-universe.png" },
+  { id: "uranus", name: "Uranus · 0 · The Fool", image: "/images/the-fool.png" },
+  { id: "neptune", name: "Neptune · XII · The Hanged Man", image: "/images/the-hanged-man.png" },
+  { id: "pluto", name: "Pluto · XX · The Aeon", image: "/images/the-aeon.png" }
 ];
 
 const LAYERS: Layer[] = [
-  { key: "root", title: "第1層 Root", meaning: "物語の種・根源的な意志・季節", drawCount: 1, pool: ACES },
-  { key: "womb", title: "第2層 Womb", meaning: "舞台設定・具現化の土壌", drawCount: 1, pool: PRINCESSES },
-  { key: "agents", title: "第3層 Agents", meaning: "動因となる2つの人格", drawCount: 2, pool: AGENTS },
-  { key: "destiny", title: "第4層 Destiny", meaning: "避けられない運命の潮流", drawCount: 1, pool: DESTINY },
-  { key: "events", title: "第5層 Events", meaning: "出来事の推移（過去・現在・未来）", drawCount: 3, pool: EVENTS },
-  { key: "focus", title: "第6層 Focus", meaning: "物語を読む最終的な視点", drawCount: 1, pool: FOCUS }
+  {
+    key: "root",
+    title: "第1層 Root",
+    meaning: "物語の種・根源的な意志・季節",
+    drawCount: 1,
+    pool: ACES,
+    triad: ["Will", "Intent", "Spark"]
+  },
+  {
+    key: "womb",
+    title: "第2層 Womb",
+    meaning: "舞台設定・具現化の土壌",
+    drawCount: 1,
+    pool: PRINCESSES,
+    triad: ["Stage", "Domain", "Matrix"]
+  },
+  {
+    key: "agents",
+    title: "第3層 Agents",
+    meaning: "動因となる2つの人格",
+    drawCount: 2,
+    pool: AGENTS,
+    triad: ["Actors", "Agents", "Duality"]
+  },
+  {
+    key: "destiny",
+    title: "第4層 Destiny",
+    meaning: "避けられない運命の潮流",
+    drawCount: 1,
+    pool: DESTINY,
+    triad: ["Fate", "Ordinance", "Law"]
+  },
+  {
+    key: "events",
+    title: "第5層 Events",
+    meaning: "出来事の推移（過去・現在・未来）",
+    drawCount: 3,
+    pool: EVENTS,
+    triad: ["Tales", "Events", "Sequences"]
+  },
+  {
+    key: "focus",
+    title: "第6層 Focus",
+    meaning: "物語を読む最終的な視点",
+    drawCount: 1,
+    pool: FOCUS,
+    triad: ["Gaze", "Vision", "Perspective"]
+  }
 ];
 
 function drawUnique(pool: Card[], count: number): Card[] {
@@ -97,6 +143,7 @@ function cap(value: string): string {
 export default function Page() {
   const [step, setStep] = useState(0);
   const [drawn, setDrawn] = useState<Record<string, Card[]>>({});
+  const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const completed = step === LAYERS.length;
   const nextStep = () => {
@@ -110,6 +157,18 @@ export default function Page() {
     setDrawn({});
     setStep(0);
   };
+
+  useEffect(() => {
+    if (step === 0) return;
+    const openedLayer = LAYERS[step - 1];
+    const target = layerRefs.current[openedLayer.key];
+    if (!target) return;
+
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }, [step]);
 
   function renderCards(layerIndex: number) {
     const layer = LAYERS[layerIndex];
@@ -145,7 +204,7 @@ export default function Page() {
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 sm:py-8">
       <div className="mx-auto grid w-full max-w-7xl gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <section className="rounded-2xl border border-indigo-100/10 bg-white/5 p-5 shadow-glow backdrop-blur-md">
+        <section className="rounded-2xl border border-indigo-100/10 bg-white/5 p-5 shadow-glow backdrop-blur-md lg:sticky lg:top-4 lg:self-start">
           <h1 className="text-2xl font-semibold tracking-wide text-indigo-100 sm:text-3xl">
             The Great Wheel Spread
           </h1>
@@ -169,39 +228,124 @@ export default function Page() {
           </div>
         </section>
         <section className="rounded-2xl border border-indigo-100/10 bg-white/5 px-4 py-6 shadow-glow backdrop-blur-md sm:px-8">
-          <div className="flex flex-col items-center">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
-              {renderCards(0)}
+          <div className="flex flex-col items-center gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  ref={(el) => {
+                    layerRefs.current[LAYERS[5].key] = el;
+                  }}
+                >
+                  <p className="text-center text-[10px] tracking-wide text-indigo-100/85">
+                    {LAYERS[5].triad.join(" — ")}
+                  </p>
+                  <div className="mt-1 flex justify-center gap-3">{renderCards(5)}</div>
+                </div>
+                <p className="text-center text-[10px] tracking-wide text-indigo-100/85">
+                  {LAYERS[4].triad.join(" — ")}
+                </p>
+                <div
+                  ref={(el) => {
+                    layerRefs.current[LAYERS[4].key] = el;
+                  }}
+                  className="flex justify-center gap-3"
+                >
+                  {renderCards(4)}
+                </div>
+              </div>
             </motion.div>
-            <div className="h-5 w-px bg-indigo-200/40" />
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
-              {renderCards(1)}
-            </motion.div>
-            <div className="h-4 w-px bg-indigo-200/40" />
-            <div className="h-px w-40 bg-indigo-200/40" />
-            <div className="mb-1 mt-1 h-4 w-px bg-indigo-200/40" />
+            <div className="flex w-full max-w-md flex-col gap-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+              >
+                <p className="mb-2 text-center text-[10px] tracking-wide text-indigo-100/85">
+                  {LAYERS[3].triad.join(" — ")}
+                </p>
+                <div
+                  ref={(el) => {
+                    layerRefs.current[LAYERS[3].key] = el;
+                  }}
+                  className="flex justify-center gap-3"
+                >
+                  {renderCards(3)}
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+              >
+                <p className="mb-2 text-center text-[10px] tracking-wide text-indigo-100/85">
+                  {LAYERS[2].triad.join(" — ")}
+                </p>
+                <div
+                  ref={(el) => {
+                    layerRefs.current[LAYERS[2].key] = el;
+                  }}
+                  className="flex justify-center gap-3"
+                >
+                  {renderCards(2)}
+                </div>
+              </motion.div>
+            </div>
 
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex gap-4">
-              {renderCards(2)}
-            </motion.div>
-            <div className="h-5 w-px bg-indigo-200/40" />
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
-              {renderCards(3)}
-            </motion.div>
-            <div className="h-5 w-px bg-indigo-200/40" />
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
-              {renderCards(4)}
-            </motion.div>
-            <div className="h-5 w-px bg-indigo-200/40" />
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3">
-              {renderCards(5)}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-center text-[10px] tracking-wide text-indigo-100/85">
+                  {LAYERS[1].triad.join(" — ")}
+                </p>
+                <div
+                  ref={(el) => {
+                    layerRefs.current[LAYERS[1].key] = el;
+                  }}
+                  className="flex justify-center gap-3"
+                >
+                  {renderCards(1)}
+                </div>
+                <p className="text-center text-[10px] tracking-wide text-indigo-100/85">
+                  {LAYERS[0].triad.join(" — ")}
+                </p>
+                <div
+                  ref={(el) => {
+                    layerRefs.current[LAYERS[0].key] = el;
+                  }}
+                  className="flex justify-center gap-3"
+                >
+                  {renderCards(0)}
+                </div>
+              </div>
             </motion.div>
           </div>
         </section>
+      </div>
+
+      <div className="fixed bottom-4 right-4 z-50 flex gap-2 lg:hidden">
+        <button
+          type="button"
+          onClick={nextStep}
+          disabled={completed}
+          className="rounded-full bg-indigo-400/30 px-3 py-2 text-xs font-medium text-indigo-50 ring-1 ring-indigo-200/40 backdrop-blur transition hover:bg-indigo-300/35 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {completed ? "完了" : `${step + 1}/6`}
+        </button>
+        <button
+          type="button"
+          onClick={reset}
+          className="rounded-full bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-100 ring-1 ring-white/30 backdrop-blur transition hover:bg-slate-800/80"
+        >
+          引き直す
+        </button>
       </div>
     </main>
   );
