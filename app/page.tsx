@@ -93,7 +93,7 @@ const LAYERS: Layer[] = [
     key: "womb",
     title: "第2層 Womb",
     meaning: "舞台設定・具現化の土壌",
-    drawCount: 1,
+    drawCount: 2,
     pool: PRINCESSES,
     triad: ["Stage", "Domain", "Matrix"]
   },
