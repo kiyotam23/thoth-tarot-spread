@@ -1,0 +1,17 @@
+依存ライブラリを無視
+
+node_modules/
+
+Next.js のビルド成果物を無視
+
+.next/
+out/
+build/
+
+OS固有のファイルを無視
+
+.DS_Store
+
+環境変数を無視（セキュリティのため）
+
+.env*
