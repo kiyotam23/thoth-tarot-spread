@@ -234,7 +234,7 @@ export default function Page() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Atziluth</p>
+              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Assiah</p>
               <div
                 ref={(el) => {
                   layerRefs.current[LAYERS[5].key] = el;
@@ -253,7 +253,7 @@ export default function Page() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Briah</p>
+              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Yetzirah</p>
               <div className="flex flex-col items-center">
                 <div
                   ref={(el) => {
@@ -284,7 +284,7 @@ export default function Page() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Yetzirah</p>
+              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Briah</p>
               <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
                 {LAYERS[2].triad.join(" — ")}
               </p>
@@ -303,7 +303,7 @@ export default function Page() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Assiah</p>
+              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Atziluth</p>
               <div className="flex flex-col items-center">
                 <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
                   {LAYERS[1].triad.join(" — ")}
