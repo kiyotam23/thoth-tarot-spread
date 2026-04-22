@@ -234,47 +234,29 @@ export default function Page() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Assiah</p>
-              <div
-                ref={(el) => {
-                  layerRefs.current[LAYERS[5].key] = el;
-                }}
-                className="flex flex-col items-center"
-              >
-                <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
-                  {LAYERS[5].triad.join(" — ")}
-                </p>
-                <div className="flex justify-center gap-3">{renderCards(5)}</div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
-            >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Yetzirah</p>
+              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Atziluth</p>
               <div className="flex flex-col items-center">
-                <div
-                  ref={(el) => {
-                    layerRefs.current[LAYERS[4].key] = el;
-                  }}
-                >
-                  <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
-                    {LAYERS[4].triad.join(" — ")}
-                  </p>
-                  <div className="flex justify-center gap-3">{renderCards(4)}</div>
-                </div>
-                <p className="mt-4 mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
-                  {LAYERS[3].triad.join(" — ")}
+                <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                  {LAYERS[0].triad.join(" — ")}
                 </p>
                 <div
                   ref={(el) => {
-                    layerRefs.current[LAYERS[3].key] = el;
+                    layerRefs.current[LAYERS[0].key] = el;
                   }}
                   className="flex justify-center gap-3"
                 >
-                  {renderCards(3)}
+                  {renderCards(0)}
+                </div>
+                <p className="mt-4 mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                  {LAYERS[1].triad.join(" — ")}
+                </p>
+                <div
+                  ref={(el) => {
+                    layerRefs.current[LAYERS[1].key] = el;
+                  }}
+                  className="flex justify-center gap-3"
+                >
+                  {renderCards(1)}
                 </div>
               </div>
             </motion.div>
@@ -303,29 +285,47 @@ export default function Page() {
               animate={{ opacity: 1, y: 0 }}
               className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Atziluth</p>
+              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Yetzirah</p>
+              <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                {LAYERS[3].triad.join(" — ")}
+              </p>
+              <div
+                ref={(el) => {
+                  layerRefs.current[LAYERS[3].key] = el;
+                }}
+                className="flex justify-center gap-3"
+              >
+                {renderCards(3)}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+            >
+              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Assiah</p>
               <div className="flex flex-col items-center">
-                <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
-                  {LAYERS[1].triad.join(" — ")}
-                </p>
                 <div
                   ref={(el) => {
-                    layerRefs.current[LAYERS[1].key] = el;
+                    layerRefs.current[LAYERS[4].key] = el;
                   }}
-                  className="flex justify-center gap-3"
                 >
-                  {renderCards(1)}
+                  <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                    {LAYERS[4].triad.join(" — ")}
+                  </p>
+                  <div className="flex justify-center gap-3">{renderCards(4)}</div>
                 </div>
                 <p className="mt-4 mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
-                  {LAYERS[0].triad.join(" — ")}
+                  {LAYERS[5].triad.join(" — ")}
                 </p>
                 <div
                   ref={(el) => {
-                    layerRefs.current[LAYERS[0].key] = el;
+                    layerRefs.current[LAYERS[5].key] = el;
                   }}
                   className="flex justify-center gap-3"
                 >
-                  {renderCards(0)}
+                  {renderCards(5)}
                 </div>
               </div>
             </motion.div>
