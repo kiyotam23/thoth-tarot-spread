@@ -184,7 +184,7 @@ export default function Page() {
           <img
             src={card.image}
             alt={card.name}
-            className="h-[5.6rem] w-16 object-cover object-center sm:h-[6.4rem] sm:w-[4.8rem]"
+            className="h-[7.2rem] w-[5.2rem] object-cover object-center sm:h-[8.4rem] sm:w-[6rem]"
             loading="lazy"
           />
         </div>
@@ -194,7 +194,7 @@ export default function Page() {
     return Array.from({ length: layer.drawCount }, (_, placeholderIdx) => (
       <div
         key={`${layer.key}-placeholder-${placeholderIdx}`}
-        className="flex h-[5.6rem] w-16 items-center justify-center rounded-lg border border-dashed border-indigo-200/30 bg-slate-950/30 text-[10px] text-indigo-200/45 sm:h-[6.4rem] sm:w-[4.8rem]"
+        className="flex h-[7.2rem] w-[5.2rem] items-center justify-center rounded-lg border border-dashed border-indigo-200/30 bg-slate-950/30 text-[10px] text-indigo-200/45 sm:h-[8.4rem] sm:w-[6rem]"
       >
         ?
       </div>
@@ -216,14 +216,14 @@ export default function Page() {
               disabled={completed}
               className="rounded-full bg-indigo-400/20 px-5 py-2 text-sm font-medium text-indigo-100 ring-1 ring-indigo-200/30 backdrop-blur transition hover:bg-indigo-300/25 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {completed ? "全レイヤー展開済み" : `カードをめくる（${step + 1}/6）`}
+              {completed ? "All Layers Revealed" : `Draw Next Layer (${step + 1} of 6)`}
             </button>
             <button
               type="button"
               onClick={reset}
               className="rounded-full bg-white/5 px-5 py-2 text-sm font-medium text-slate-200 ring-1 ring-white/20 transition hover:bg-white/10"
             >
-              引き直す
+              Reset Spread
             </button>
           </div>
         </section>
@@ -337,14 +337,14 @@ export default function Page() {
           disabled={completed}
           className="rounded-full bg-indigo-400/30 px-3 py-2 text-xs font-medium text-indigo-50 ring-1 ring-indigo-200/40 backdrop-blur transition hover:bg-indigo-300/35 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {completed ? "完了" : `${step + 1}/6`}
+          {completed ? "Complete" : `Next (${step + 1} of 6)`}
         </button>
         <button
           type="button"
           onClick={reset}
           className="rounded-full bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-100 ring-1 ring-white/30 backdrop-blur transition hover:bg-slate-800/80"
         >
-          引き直す
+          Reset
         </button>
       </div>
     </main>
