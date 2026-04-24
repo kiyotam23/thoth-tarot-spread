@@ -1,7 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import katex from "katex";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CARD_INDEX } from "../constants/cards";
 
 type Card = {
   id: string;
@@ -136,6 +138,55 @@ const REVEAL_ATZILUTH_TO_ASSIAH: number[] = [0, 1, 2, 3, 4, 5];
 /** L6 (Assiah) → L1 (Atziluth) — return upward on screen */
 const REVEAL_ASSIAH_TO_ATZILUTH: number[] = [5, 4, 3, 2, 1, 0];
 
+const GLOBAL_LOGIC_EQUATION =
+  "\\mathrm{Result} = \\mathcal{G} \\circ \\mathcal{T} \\circ \\mathcal{F} \\circ \\mathcal{A} \\circ \\mathcal{S}(W)";
+
+const LAYER_HELP: Record<Layer["key"], { title: string; body: string; formula?: string }> = {
+  root: {
+    title: "Will — Intent — Spark",
+    body: "Atziluth / Kether.\nOne Ace card.\nA singularity that sets the primal polarity of the entire spread.",
+    formula: "\\vec{V}_{seed} = \\mathrm{Ace}_{element}"
+  },
+  womb: {
+    title: "Stage — Domain — Matrix",
+    body: "Atziluth / Chokmah & Binah.\nTwo Princess cards.\nDefines the field and constraints as boundary conditions.\nForms the two pillars (Severity / Mercy).",
+    formula: "\\mathcal{S}(W) = \\{P_{left},\\,P_{right}\\}"
+  },
+  agents: {
+    title: "Actors — Agents — Duality",
+    body: "Briah / Chesed & Geburah.\nTwo Court cards (Knight/Queen/Prince).\nInjects dynamic forces into the system.",
+    formula: "\\mathcal{A} = \\sum_{i=1}^{2}(\\mathrm{Court}_i \\times \\mathrm{Vector}_i)"
+  },
+  destiny: {
+    title: "Fate — Ordinance — Law",
+    body: "Briah / Tiphareth.\nOne zodiac-linked Major Arcana card.\nA fixed system protocol that governs the whole.",
+    formula: "\\mathcal{F} = \\mathrm{Const}(\\mathrm{Zodiac})"
+  },
+  events: {
+    title: "Tales — Events — Sequences",
+    body: "Yetzirah / Netzach, Hod, Yesod.\nThree small cards.\nTime-series projection into concrete unfolding.",
+    formula: "\\mathcal{T} = \\{\\mathrm{Netzach},\\,\\mathrm{Hod},\\,\\mathrm{Yesod}\\}"
+  },
+  focus: {
+    title: "Gaze — Vision — Perspective",
+    body: "Assiah / Malkuth.\nOne planet-linked Major Arcana card.\nFinal observation in the material plane.",
+    formula: "\\mathcal{G} = \\int \\mathcal{T}\\,dt \\rightarrow \\mathrm{Planet}"
+  }
+};
+
+function LatexInline({ tex }: { tex: string }) {
+  const html = useMemo(
+    () =>
+      katex.renderToString(tex, {
+        throwOnError: false,
+        displayMode: false
+      }),
+    [tex]
+  );
+
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 function drawUnique(pool: Card[], count: number): Card[] {
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
@@ -150,6 +201,9 @@ export default function Page() {
   const [drawn, setDrawn] = useState<Record<string, Card[]>>({});
   /** true = descending: first reveal = Layer 1 (Atziluth, top) … last = Layer 6 (Assiah, bottom) */
   const [revealAtziluthToAssiah, setRevealAtziluthToAssiah] = useState(true);
+  const [activeHelpKey, setActiveHelpKey] = useState<Layer["key"] | null>(null);
+  const [isGlobalHelpOpen, setIsGlobalHelpOpen] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const rightPanelRef = useRef<HTMLDivElement | null>(null);
   const cardBackImage = "/images/card_back.jpg";
@@ -158,6 +212,8 @@ export default function Page() {
     () => (revealAtziluthToAssiah ? REVEAL_ATZILUTH_TO_ASSIAH : REVEAL_ASSIAH_TO_ATZILUTH),
     [revealAtziluthToAssiah]
   );
+  const selectedCard = selectedCardId ? CARD_INDEX[selectedCardId] : null;
+  const isSelectedPlanetLayer = selectedCard?.layer === 6;
 
   const completed = step === LAYERS.length;
   const nextStep = () => {
@@ -220,12 +276,19 @@ export default function Page() {
           transition={{ duration: 0.2, ease: "easeOut" }}
           className="spread-tile overflow-hidden rounded-lg border"
         >
-          <img
-            src={card.image}
-            alt={card.name}
-            className="h-[7.2rem] w-[5.2rem] object-cover object-center sm:h-[8.4rem] sm:w-[6rem]"
-            loading="lazy"
-          />
+          <button
+            type="button"
+            onClick={() => setSelectedCardId(card.id)}
+            className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
+            aria-label={`Open details for ${card.name}`}
+          >
+            <img
+              src={card.image}
+              alt={card.name}
+              className="h-[7.2rem] w-[5.2rem] object-cover object-center sm:h-[8.4rem] sm:w-[6rem]"
+              loading="lazy"
+            />
+          </button>
         </motion.div>
       ));
     }
@@ -242,6 +305,23 @@ export default function Page() {
     ));
   }
 
+  function renderTriadLabel(layerIndex: number, className: string) {
+    const layer = LAYERS[layerIndex];
+    return (
+      <div className={`flex items-center justify-center gap-2 ${className}`}>
+        <p className="spread-triad text-center text-sm font-semibold tracking-wide">{layer.triad.join(" — ")}</p>
+        <button
+          type="button"
+          aria-label={`Help for ${layer.triad.join(" — ")}`}
+          onClick={() => setActiveHelpKey(layer.key)}
+          className="spread-btn-ghost inline-flex h-5 w-5 items-center justify-center rounded-full p-0 text-[11px] leading-none"
+        >
+          ?
+        </button>
+      </div>
+    );
+  }
+
   return (
     <main
       data-theme={revealAtziluthToAssiah ? "descending" : "ascending"}
@@ -254,7 +334,17 @@ export default function Page() {
           </h1>
 
           <div className="mt-3">
-            <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
+            <div className="flex items-center gap-2">
+              <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
+              <button
+                type="button"
+                aria-label="Global logic help"
+                onClick={() => setIsGlobalHelpOpen(true)}
+                className="spread-btn-ghost inline-flex h-5 w-5 items-center justify-center rounded-full p-0 text-[11px] leading-none"
+              >
+                ?
+              </button>
+            </div>
             <div className="mt-1.5 flex w-max max-w-full items-center gap-2">
               <span
                 className={`shrink-0 text-xs ${
@@ -318,9 +408,7 @@ export default function Page() {
             >
               <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Atziluth</p>
               <div className="flex flex-col items-center">
-                <p className="spread-triad mb-3 text-center text-sm font-semibold tracking-wide">
-                  {LAYERS[0].triad.join(" — ")}
-                </p>
+                {renderTriadLabel(0, "mb-3")}
                 <div
                   ref={(el) => {
                     layerRefs.current[LAYERS[0].key] = el;
@@ -329,9 +417,7 @@ export default function Page() {
                 >
                   {renderCards(0)}
                 </div>
-                <p className="spread-triad mt-4 mb-3 text-center text-sm font-semibold tracking-wide">
-                  {LAYERS[1].triad.join(" — ")}
-                </p>
+                {renderTriadLabel(1, "mt-4 mb-3")}
                 <div
                   ref={(el) => {
                     layerRefs.current[LAYERS[1].key] = el;
@@ -350,9 +436,7 @@ export default function Page() {
             >
               <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Briah</p>
               <div className="flex flex-col items-center">
-                <p className="spread-triad mb-3 text-center text-sm font-semibold tracking-wide">
-                  {LAYERS[2].triad.join(" — ")}
-                </p>
+                {renderTriadLabel(2, "mb-3")}
                 <div
                   ref={(el) => {
                     layerRefs.current[LAYERS[2].key] = el;
@@ -361,9 +445,7 @@ export default function Page() {
                 >
                   {renderCards(2)}
                 </div>
-                <p className="spread-triad mt-4 mb-3 text-center text-sm font-semibold tracking-wide">
-                  {LAYERS[3].triad.join(" — ")}
-                </p>
+                {renderTriadLabel(3, "mt-4 mb-3")}
                 <div
                   ref={(el) => {
                     layerRefs.current[LAYERS[3].key] = el;
@@ -381,9 +463,7 @@ export default function Page() {
               className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
             >
               <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Yetzirah</p>
-              <p className="spread-triad mb-3 text-center text-sm font-semibold tracking-wide">
-                {LAYERS[4].triad.join(" — ")}
-              </p>
+              {renderTriadLabel(4, "mb-3")}
               <div
                 ref={(el) => {
                   layerRefs.current[LAYERS[4].key] = el;
@@ -403,9 +483,7 @@ export default function Page() {
             >
               <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Assiah</p>
               <div className="flex flex-col items-center">
-                <p className="spread-triad mb-3 text-center text-sm font-semibold tracking-wide">
-                  {LAYERS[5].triad.join(" — ")}
-                </p>
+                {renderTriadLabel(5, "mb-3")}
                 <div
                   ref={(el) => {
                     layerRefs.current[LAYERS[5].key] = el;
@@ -437,6 +515,148 @@ export default function Page() {
           Reset
         </button>
       </div>
+
+      {activeHelpKey ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Layer help"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setActiveHelpKey(null)}
+        >
+          <div
+            className="spread-outer w-full max-w-md rounded-2xl border p-4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="spread-triad text-base font-semibold">{LAYER_HELP[activeHelpKey].title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveHelpKey(null)}
+                className="spread-btn-ghost rounded-full px-2 py-1 text-xs"
+              >
+                Close
+              </button>
+            </div>
+            <p className="spread-hint mt-3 whitespace-pre-line text-sm leading-relaxed">{LAYER_HELP[activeHelpKey].body}</p>
+            {LAYER_HELP[activeHelpKey].formula ? (
+              <p className="mt-2 text-sm text-indigo-100/90">
+                <LatexInline tex={LAYER_HELP[activeHelpKey].formula} />
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {isGlobalHelpOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Global logic help"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setIsGlobalHelpOpen(false)}
+        >
+          <div
+            className="spread-outer w-full max-w-md rounded-2xl border p-4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h3 className="spread-triad text-base font-semibold">Global Logic</h3>
+              <button
+                type="button"
+                onClick={() => setIsGlobalHelpOpen(false)}
+                className="spread-btn-ghost rounded-full px-2 py-1 text-xs"
+              >
+                Close
+              </button>
+            </div>
+            <p className="spread-hint mt-3 text-sm leading-relaxed">
+              <LatexInline tex={GLOBAL_LOGIC_EQUATION} />
+            </p>
+            <div className="spread-hint mt-3 space-y-1 text-sm leading-relaxed">
+              <p>Layer 1: W (Will) - Primal vector</p>
+              <p>Layer 2: S (Stage) - Environmental filter</p>
+              <p>Layer 3: A (Actors) - Dynamic energy mapping</p>
+              <p>Layer 4: F (Fate) - System-level constraints</p>
+              <p>Layer 5: T (Tales) - Time-series unfolding</p>
+              <p>Layer 6: G (Gaze) - Observed reality</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedCard ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Card details"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setSelectedCardId(null)}
+        >
+          <div
+            className="spread-outer w-full max-w-2xl rounded-2xl border p-4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <h3 className="spread-triad text-base font-semibold">{selectedCard.name}</h3>
+              <button
+                type="button"
+                onClick={() => setSelectedCardId(null)}
+                className="spread-btn-ghost rounded-full px-2 py-1 text-xs"
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-3 grid gap-4 md:grid-cols-[auto_1fr]">
+              <img
+                src={selectedCard.image}
+                alt={selectedCard.name}
+                className="mx-auto h-[16.8rem] w-[12rem] rounded-lg border border-white/15 object-cover object-center"
+              />
+              <div className="spread-hint text-sm leading-relaxed">
+                <p>
+                  <strong className="spread-triad font-semibold">Stats</strong>
+                </p>
+                <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+                  {selectedCard.suit ? <p>Suit: {selectedCard.suit}</p> : null}
+                  {selectedCard.rank ? (
+                    <p>Rank: {selectedCard.arcanaTitle ? `${selectedCard.rank} (${selectedCard.arcanaTitle})` : selectedCard.rank}</p>
+                  ) : null}
+                  {selectedCard.number ? <p>Number: {selectedCard.number}</p> : null}
+                  {selectedCard.elementalAttribution ? <p>Element: {selectedCard.elementalAttribution}</p> : null}
+                  {selectedCard.astrology.sign ? <p>Sign: {selectedCard.astrology.sign}</p> : null}
+                  {selectedCard.astrology.element ? <p>Element Type: {selectedCard.astrology.element}</p> : null}
+                  {isSelectedPlanetLayer && selectedCard.astrology.planet ? (
+                    <p>Planet: {selectedCard.astrology.planet}</p>
+                  ) : null}
+                  {selectedCard.astrology.modality ? <p>Modality: {selectedCard.astrology.modality}</p> : null}
+                  {!isSelectedPlanetLayer && selectedCard.astrology.planetRuler ? (
+                    <p>Planet Ruler: {selectedCard.astrology.planetRuler}</p>
+                  ) : null}
+                  {isSelectedPlanetLayer && selectedCard.astrology.governingSign ? (
+                    <p>Governing Sign: {selectedCard.astrology.governingSign}</p>
+                  ) : null}
+                  {selectedCard.dayOfWeek ? <p>Day: {selectedCard.dayOfWeek}</p> : null}
+                  {selectedCard.metal ? <p>Metal: {selectedCard.metal}</p> : null}
+                  {selectedCard.hebrewLetter ? <p>Hebrew Letter: {selectedCard.hebrewLetter}</p> : null}
+                  {selectedCard.treeOfLifePath ? <p>Path: {selectedCard.treeOfLifePath}</p> : null}
+                  {selectedCard.astrology.decanRange ? (
+                    <p>
+                      Span:{" "}
+                      {selectedCard.astrology.sign
+                        ? `${selectedCard.astrology.sign} ${selectedCard.astrology.decanRange}`
+                        : selectedCard.astrology.decanRange}
+                    </p>
+                  ) : null}
+                  {selectedCard.astrology.dates ? <p>Dates: {selectedCard.astrology.dates}</p> : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
