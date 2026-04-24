@@ -1,9 +1,44 @@
 "use client";
 
-import { motion } from "framer-motion";
 import katex from "katex";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CARD_INDEX } from "../constants/cards";
+
+const KATEX_OPTS = { throwOnError: false } as const;
+
+function renderKatexHtml(tex: string, displayMode: boolean) {
+  return katex.renderToString(tex, { ...KATEX_OPTS, displayMode });
+}
+
+/** Reusable class strings — change layout / chrome in one place */
+const spread = {
+  main: "flex min-h-screen flex-col px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8 lg:box-border lg:min-h-0 lg:h-[100dvh] lg:overflow-hidden lg:px-6 lg:py-6",
+  shell: "mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col gap-5 max-lg:min-h-0 lg:min-h-0 lg:max-h-full lg:flex-row",
+  rail:
+    "spread-outer w-full shrink-0 rounded-2xl border p-5 supports-[backdrop-filter]:backdrop-blur-sm lg:w-[20rem] lg:max-w-[20rem] lg:supports-[backdrop-filter]:backdrop-blur-md transition-colors duration-300",
+  canvas:
+    "spread-outer w-full min-w-0 overflow-x-hidden rounded-2xl border px-4 py-6 supports-[backdrop-filter]:backdrop-blur-sm lg:supports-[backdrop-filter]:backdrop-blur-md transition-colors duration-300 sm:px-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain",
+  worldCard:
+    "spread-inner spread-panel spread-panel-fade w-full max-w-md rounded-xl border p-3 transition-colors duration-300",
+  worldLabel: "spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]",
+  title: "spread-title whitespace-nowrap text-xl font-semibold tracking-wide sm:text-2xl",
+  modalOverlay: "fixed inset-0 flex items-center justify-center bg-black/90 p-4",
+  modalZHelp: "z-[60]",
+  modalZCard: "z-[70]",
+  modalSheet: "spread-outer w-full max-w-md rounded-2xl border p-4",
+  modalSheetWide: "spread-outer w-full max-w-2xl rounded-2xl border p-4",
+  helpIcon: "spread-btn-ghost inline-flex h-5 w-5 items-center justify-center rounded-full p-0 text-[11px] leading-none",
+  modalClose: "spread-btn-ghost rounded-full px-2 py-1 text-xs",
+  floatWrap: "fixed bottom-4 right-4 z-50 flex flex-wrap items-stretch justify-end gap-3 lg:hidden",
+  floatNext:
+    "spread-float-next min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold supports-[backdrop-filter]:backdrop-blur-sm transition disabled:cursor-not-allowed disabled:opacity-40",
+  floatReset:
+    "spread-float-reset min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold supports-[backdrop-filter]:backdrop-blur-sm transition",
+  controlGrid: "mt-3 grid w-full grid-cols-2 gap-2",
+  drawBtn: "spread-btn-go min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium backdrop-blur transition disabled:cursor-not-allowed disabled:opacity-40",
+  resetBtn: "spread-btn-ghost min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium transition",
+  modalHeader: "flex items-start justify-between gap-4"
+} as const;
 
 type Card = {
   id: string;
@@ -141,15 +176,6 @@ const REVEAL_ASSIAH_TO_ATZILUTH: number[] = [5, 4, 3, 2, 1, 0];
 const GLOBAL_LOGIC_EQUATION =
   "\\mathrm{Result} = \\mathcal{G} \\circ \\mathcal{T} \\circ \\mathcal{F} \\circ \\mathcal{A} \\circ \\mathcal{S}(W)";
 
-const LAYER_OPERATOR_TEX: Record<Layer["key"], string> = {
-  root: "\\mathcal{W}",
-  womb: "\\mathcal{S}",
-  agents: "\\mathcal{A}",
-  destiny: "\\mathcal{F}",
-  events: "\\mathcal{T}",
-  focus: "\\mathcal{G}"
-};
-
 const LAYER_HELP: Record<Layer["key"], { title: string; body: string; formula?: string }> = {
   root: {
     title: "Will — Intent — Spark",
@@ -183,29 +209,15 @@ const LAYER_HELP: Record<Layer["key"], { title: string; body: string; formula?: 
   }
 };
 
-function LatexInline({ tex }: { tex: string }) {
-  const html = useMemo(
-    () =>
-      katex.renderToString(tex, {
-        throwOnError: false,
-        displayMode: false
-      }),
-    [tex]
-  );
+const LAYERS_BY_KEY = Object.fromEntries(LAYERS.map((layer) => [layer.key, layer])) as Record<Layer["key"], Layer>;
 
+function LatexInline({ tex }: { tex: string }) {
+  const html = useMemo(() => renderKatexHtml(tex, false), [tex]);
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 function LatexBlock({ tex }: { tex: string }) {
-  const html = useMemo(
-    () =>
-      katex.renderToString(tex, {
-        throwOnError: false,
-        displayMode: true
-      }),
-    [tex]
-  );
-
+  const html = useMemo(() => renderKatexHtml(tex, true), [tex]);
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
@@ -222,9 +234,62 @@ function renderTriadWithOperator(layer: Layer) {
   );
 }
 
+function HelpIconButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" aria-label={label} onClick={onClick} className={spread.helpIcon}>
+      ?
+    </button>
+  );
+}
+
+function ModalCloseButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={spread.modalClose}>
+      Close
+    </button>
+  );
+}
+
+function SpreadDialog({
+  "aria-label": ariaLabel,
+  z,
+  maxWidth,
+  onClose,
+  children
+}: {
+  "aria-label": string;
+  z: "help" | "card";
+  maxWidth: "md" | "wide";
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={ariaLabel}
+      className={`${spread.modalOverlay} ${z === "help" ? spread.modalZHelp : spread.modalZCard}`}
+      onClick={onClose}
+    >
+      <div
+        className={maxWidth === "wide" ? spread.modalSheetWide : spread.modalSheet}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function drawUnique(pool: Card[], count: number): Card[] {
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
+  // Partial Fisher-Yates: unbiased and avoids full sort cost.
+  const cloned = [...pool];
+  const max = Math.min(count, cloned.length);
+  for (let i = 0; i < max; i += 1) {
+    const j = i + Math.floor(Math.random() * (cloned.length - i));
+    [cloned[i], cloned[j]] = [cloned[j], cloned[i]];
+  }
+  return cloned.slice(0, max);
 }
 
 function cap(value: string): string {
@@ -291,15 +356,6 @@ function symbolizeSignValue(value: string): string {
     .join(" / ");
 }
 
-function symbolizeElementalAttribution(value: string): string {
-  return value
-    .split(" of ")
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .map((part) => ELEMENT_SYMBOL[part] ?? part)
-    .join(" of ");
-}
-
 function formatElementLabel(value: string): string {
   const symbol = ELEMENT_SYMBOL[value];
   return symbol ? `${symbol} ${value}` : value;
@@ -349,11 +405,26 @@ export default function Page() {
   const rightPanelRef = useRef<HTMLDivElement | null>(null);
   const cardBackImage = "/images/card_back.jpg";
 
+  const layerRef = useMemo(
+    () =>
+      Object.fromEntries(
+        LAYERS.map((layer) => [
+          layer.key,
+          (el: HTMLDivElement | null) => {
+            layerRefs.current[layer.key] = el;
+          }
+        ])
+      ) as Record<Layer["key"], (el: HTMLDivElement | null) => void>,
+    []
+  );
+
   const revealOrder = useMemo(
     () => (revealAtziluthToAssiah ? REVEAL_ATZILUTH_TO_ASSIAH : REVEAL_ASSIAH_TO_ATZILUTH),
     [revealAtziluthToAssiah]
   );
   const selectedCard = selectedCardId ? CARD_INDEX[selectedCardId] : null;
+  const activeLayer = activeHelpKey ? LAYERS_BY_KEY[activeHelpKey] : null;
+  const activeLayerHelp = activeHelpKey ? LAYER_HELP[activeHelpKey] : null;
   const isSelectedPlanetLayer = selectedCard?.layer === 6;
   const selectedCardModalTitle =
     selectedCard &&
@@ -367,27 +438,27 @@ export default function Page() {
     : null;
 
   const completed = step === LAYERS.length;
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     if (step >= LAYERS.length) return;
     const layerIndex = revealOrder[step];
     const layer = LAYERS[layerIndex];
     setDrawn((prev) => ({ ...prev, [layer.key]: drawUnique(layer.pool, layer.drawCount) }));
     setStep((prev) => prev + 1);
-  };
+  }, [revealOrder, step]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setDrawn({});
     setStep(0);
     window.scrollTo({ top: 0, behavior: "smooth" });
     rightPanelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, []);
 
-  const toggleRevealOrder = () => {
+  const toggleRevealOrder = useCallback(() => {
     setRevealAtziluthToAssiah((v) => !v);
     setDrawn({});
     setStep(0);
     rightPanelRef.current?.scrollTo({ top: 0, behavior: "auto" });
-  };
+  }, []);
 
   useEffect(() => {
     if (step === 0) return;
@@ -403,98 +474,79 @@ export default function Page() {
   }, [step, revealOrder]);
 
   useEffect(() => {
-    const uniqueImages = Array.from(
-      new Set([...LAYERS.flatMap((layer) => layer.pool.map((card) => card.image)), cardBackImage])
-    );
+    // Keep only the shared card-back warm to avoid eager loading every card asset.
+    const img = new Image();
+    img.src = cardBackImage;
+  }, [cardBackImage]);
 
-    uniqueImages.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, []);
+  const cardsByLayer = useMemo<ReactNode[][]>(
+    () =>
+      LAYERS.map((layer) => {
+        const opened = (drawn[layer.key]?.length ?? 0) > 0;
 
-  function renderCards(layerIndex: number) {
-    const layer = LAYERS[layerIndex];
-    const opened = (drawn[layer.key]?.length ?? 0) > 0;
+        if (opened) {
+          const cards = drawn[layer.key] ?? [];
+          return cards.map((card) => (
+            <div key={card.id} className="spread-tile spread-fade-in spread-card-back-shell border">
+              <button
+                type="button"
+                onClick={() => setSelectedCardId(card.id)}
+                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
+                aria-label={`Open details for ${card.name}`}
+              >
+                <img
+                  src={card.image}
+                  alt={card.name}
+                  className="spread-card-thumb"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </button>
+            </div>
+          ));
+        }
 
-    if (opened) {
-      const cards = drawn[layer.key] ?? [];
-      return cards.map((card) => (
-        <motion.div
-          key={card.id}
-          initial={{ opacity: 0, y: 8, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="spread-tile overflow-hidden rounded-lg border"
-        >
-          <button
-            type="button"
-            onClick={() => setSelectedCardId(card.id)}
-            className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
-            aria-label={`Open details for ${card.name}`}
+        return Array.from({ length: layer.drawCount }, (_, placeholderIdx) => (
+          <div
+            key={`${layer.key}-placeholder-${placeholderIdx}`}
+            aria-label="card back"
+            className="spread-tile-back spread-card-back-shell border border-dashed"
           >
             <img
-              src={card.image}
-              alt={card.name}
-              className="h-[7.2rem] w-[5.2rem] object-cover object-center sm:h-[8.4rem] sm:w-[6rem]"
+              src={cardBackImage}
+              alt=""
+              className="spread-card-back-img"
               loading="lazy"
+              decoding="async"
             />
-          </button>
-        </motion.div>
-      ));
-    }
-
-    return Array.from({ length: layer.drawCount }, (_, placeholderIdx) => (
-      <div
-        key={`${layer.key}-placeholder-${placeholderIdx}`}
-        aria-label="card back"
-        className="spread-tile-back h-[7.2rem] w-[5.2rem] rounded-lg border border-dashed bg-cover bg-center sm:h-[8.4rem] sm:w-[6rem]"
-        style={{ backgroundImage: `url(${cardBackImage})` }}
-      >
-        <span className="sr-only">Card Back</span>
-      </div>
-    ));
-  }
+            <span className="sr-only">Card Back</span>
+          </div>
+        ));
+      }),
+    [drawn, cardBackImage]
+  );
+  const yetzirahCards = cardsByLayer[4] ?? [];
 
   function renderTriadLabel(layerIndex: number, className: string) {
     const layer = LAYERS[layerIndex];
     return (
-      <div className={`flex items-center justify-center gap-2 ${className}`}>
+      <div className={`spread-triad-row ${className}`}>
         <p className="spread-triad text-center text-sm font-semibold tracking-wide">{renderTriadWithOperator(layer)}</p>
-        <button
-          type="button"
-          aria-label={`Help for ${layer.triad.join(" — ")}`}
-          onClick={() => setActiveHelpKey(layer.key)}
-          className="spread-btn-ghost inline-flex h-5 w-5 items-center justify-center rounded-full p-0 text-[11px] leading-none"
-        >
-          ?
-        </button>
+        <HelpIconButton label={`Help for ${layer.triad.join(" — ")}`} onClick={() => setActiveHelpKey(layer.key)} />
       </div>
     );
   }
 
   return (
-    <main
-      data-theme={revealAtziluthToAssiah ? "descending" : "ascending"}
-      className="flex min-h-screen flex-col px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8 lg:box-border lg:min-h-0 lg:h-[100dvh] lg:overflow-hidden lg:px-6 lg:py-6"
-    >
-      <div className="mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col gap-5 max-lg:min-h-0 lg:min-h-0 lg:max-h-full lg:flex-row">
-        <section className="spread-outer w-full shrink-0 rounded-2xl border p-5 backdrop-blur-md transition-colors duration-300 lg:w-[20rem] lg:max-w-[20rem]">
-          <h1 className="spread-title whitespace-nowrap text-xl font-semibold tracking-wide sm:text-2xl">
-            The Great Wheel Spread
-          </h1>
+    <main data-theme={revealAtziluthToAssiah ? "descending" : "ascending"} className={spread.main}>
+      <div className={spread.shell}>
+        <section className={spread.rail}>
+          <h1 className={spread.title}>The Great Wheel Spread</h1>
 
           <div className="mt-3">
             <div className="flex items-center gap-2">
               <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
-              <button
-                type="button"
-                aria-label="Global logic help"
-                onClick={() => setIsGlobalHelpOpen(true)}
-                className="spread-btn-ghost inline-flex h-5 w-5 items-center justify-center rounded-full p-0 text-[11px] leading-none"
-              >
-                ?
-              </button>
+              <HelpIconButton label="Global logic help" onClick={() => setIsGlobalHelpOpen(true)} />
             </div>
             <div className="mt-1.5 flex w-max max-w-full items-center gap-2">
               <span
@@ -529,314 +581,208 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="mt-3 grid w-full grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={nextStep}
-              disabled={completed}
-              className="spread-btn-go min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium backdrop-blur transition disabled:cursor-not-allowed disabled:opacity-40"
-            >
+          <div className={spread.controlGrid}>
+            <button type="button" onClick={nextStep} disabled={completed} className={spread.drawBtn}>
               {completed ? "All Revealed" : `Draw (${step + 1}/6)`}
             </button>
-            <button
-              type="button"
-              onClick={reset}
-              className="spread-btn-ghost min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium transition"
-            >
+            <button type="button" onClick={reset} className={spread.resetBtn}>
               Reset
             </button>
           </div>
         </section>
-        <section
-          ref={rightPanelRef}
-          className="spread-outer w-full min-w-0 overflow-x-hidden rounded-2xl border px-4 py-6 backdrop-blur-md transition-colors duration-300 sm:px-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain"
-        >
+        <section ref={rightPanelRef} className={spread.canvas}>
           <div className="flex flex-col items-center gap-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
-            >
-              <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Atziluth</p>
+            <div className={spread.worldCard}>
+              <p className={spread.worldLabel}>Atziluth</p>
               <div className="flex flex-col items-center">
                 {renderTriadLabel(0, "mb-3")}
-                <div
-                  ref={(el) => {
-                    layerRefs.current[LAYERS[0].key] = el;
-                  }}
-                  className="flex justify-center gap-3"
-                >
-                  {renderCards(0)}
+                <div ref={layerRef[LAYERS[0].key]} className="spread-card-row">
+                  {cardsByLayer[0]}
                 </div>
                 {renderTriadLabel(1, "mt-4 mb-3")}
-                <div
-                  ref={(el) => {
-                    layerRefs.current[LAYERS[1].key] = el;
-                  }}
-                  className="flex justify-center gap-3"
-                >
-                  {renderCards(1)}
+                <div ref={layerRef[LAYERS[1].key]} className="spread-card-row">
+                  {cardsByLayer[1]}
                 </div>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
-            >
-              <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Briah</p>
+            <div className={spread.worldCard}>
+              <p className={spread.worldLabel}>Briah</p>
               <div className="flex flex-col items-center">
                 {renderTriadLabel(2, "mb-3")}
-                <div
-                  ref={(el) => {
-                    layerRefs.current[LAYERS[2].key] = el;
-                  }}
-                  className="flex justify-center gap-3"
-                >
-                  {renderCards(2)}
+                <div ref={layerRef[LAYERS[2].key]} className="spread-card-row">
+                  {cardsByLayer[2]}
                 </div>
                 {renderTriadLabel(3, "mt-4 mb-3")}
-                <div
-                  ref={(el) => {
-                    layerRefs.current[LAYERS[3].key] = el;
-                  }}
-                  className="flex justify-center gap-3"
-                >
-                  {renderCards(3)}
+                <div ref={layerRef[LAYERS[3].key]} className="spread-card-row">
+                  {cardsByLayer[3]}
                 </div>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
-            >
-              <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Yetzirah</p>
+            <div className={spread.worldCard}>
+              <p className={spread.worldLabel}>Yetzirah</p>
               {renderTriadLabel(4, "mb-3")}
-              <div
-                ref={(el) => {
-                  layerRefs.current[LAYERS[4].key] = el;
-                }}
-                className="mx-auto grid w-fit grid-cols-2 gap-3"
-              >
-                {renderCards(4)[0]}
-                {renderCards(4)[1]}
-                <div className="col-span-2 -mt-1 flex justify-center">{renderCards(4)[2]}</div>
+              <div ref={layerRef[LAYERS[4].key]} className="mx-auto grid w-fit grid-cols-2 gap-3">
+                {yetzirahCards[0]}
+                {yetzirahCards[1]}
+                <div className="col-span-2 -mt-1 flex justify-center">{yetzirahCards[2]}</div>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
-            >
-              <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Assiah</p>
+            <div className={spread.worldCard}>
+              <p className={spread.worldLabel}>Assiah</p>
               <div className="flex flex-col items-center">
                 {renderTriadLabel(5, "mb-3")}
-                <div
-                  ref={(el) => {
-                    layerRefs.current[LAYERS[5].key] = el;
-                  }}
-                  className="flex justify-center gap-3"
-                >
-                  {renderCards(5)}
+                <div ref={layerRef[LAYERS[5].key]} className="spread-card-row">
+                  {cardsByLayer[5]}
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </section>
       </div>
 
-      <div className="fixed bottom-4 right-4 z-50 flex flex-wrap items-stretch justify-end gap-3 lg:hidden">
-        <button
-          type="button"
-          onClick={nextStep}
-          disabled={completed}
-          className="spread-float-next min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold backdrop-blur transition disabled:cursor-not-allowed disabled:opacity-40"
-        >
+      <div className={spread.floatWrap}>
+        <button type="button" onClick={nextStep} disabled={completed} className={spread.floatNext}>
           {completed ? "Complete" : `Next (${step + 1} of 6)`}
         </button>
-        <button
-          type="button"
-          onClick={reset}
-          className="spread-float-reset min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold backdrop-blur transition"
-        >
+        <button type="button" onClick={reset} className={spread.floatReset}>
           Reset
         </button>
       </div>
 
       {activeHelpKey ? (
-        <div
-          role="dialog"
-          aria-modal="true"
+        <SpreadDialog
           aria-label="Layer help"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setActiveHelpKey(null)}
+          z="help"
+          maxWidth="md"
+          onClose={() => setActiveHelpKey(null)}
         >
-          <div
-            className="spread-outer w-full max-w-md rounded-2xl border p-4"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="spread-triad text-base font-semibold">
-                  {renderTriadWithOperator(LAYERS.find((layer) => layer.key === activeHelpKey)!)}
-                </h3>
-                <p className="spread-hint mt-1 text-xs">
-                  {LAYERS.find((layer) => layer.key === activeHelpKey)!.triad.slice(1).join(", ")}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveHelpKey(null)}
-                className="spread-btn-ghost rounded-full px-2 py-1 text-xs"
-              >
-                Close
-              </button>
+          <div className={spread.modalHeader}>
+            <div>
+              <h3 className="spread-triad text-base font-semibold">
+                {activeLayer ? renderTriadWithOperator(activeLayer) : null}
+              </h3>
+              {activeLayer ? <p className="spread-hint mt-1 text-xs">{activeLayer.triad.slice(1).join(", ")}</p> : null}
             </div>
-            <p className="spread-hint mt-3 whitespace-pre-line text-sm leading-relaxed">{LAYER_HELP[activeHelpKey].body}</p>
-            {LAYER_HELP[activeHelpKey].formula ? (
-              <p className="mt-2 text-sm text-indigo-100/90">
-                <LatexInline tex={LAYER_HELP[activeHelpKey].formula} />
-              </p>
-            ) : null}
+            <ModalCloseButton onClick={() => setActiveHelpKey(null)} />
           </div>
-        </div>
+          <p className="spread-hint mt-3 whitespace-pre-line text-sm leading-relaxed">{activeLayerHelp?.body}</p>
+          {activeLayerHelp?.formula ? (
+            <p className="mt-2 text-sm text-indigo-100/90">
+              <LatexInline tex={activeLayerHelp.formula} />
+            </p>
+          ) : null}
+        </SpreadDialog>
       ) : null}
 
       {isGlobalHelpOpen ? (
-        <div
-          role="dialog"
-          aria-modal="true"
+        <SpreadDialog
           aria-label="Global logic help"
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setIsGlobalHelpOpen(false)}
+          z="help"
+          maxWidth="md"
+          onClose={() => setIsGlobalHelpOpen(false)}
         >
-          <div
-            className="spread-outer w-full max-w-md rounded-2xl border p-4"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="spread-triad text-base font-semibold">Global Logic</h3>
-              <button
-                type="button"
-                onClick={() => setIsGlobalHelpOpen(false)}
-                className="spread-btn-ghost rounded-full px-2 py-1 text-xs"
-              >
-                Close
-              </button>
-            </div>
-            <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
-              <p>
-                <strong className="spread-triad font-semibold">Descending</strong> is the mode of unfoldment where will
-                crystallizes into reality through the layered spread.
-              </p>
-              <p>
-                <strong className="spread-triad font-semibold">Ascending</strong> is the mode of analysis where the
-                narrative is integrated back toward essence.
-              </p>
-            </div>
-            <div className="mt-2 text-sm text-indigo-100/90">
-              <LatexBlock tex={"\\mathcal{G} = \\int \\mathcal{T}\\,dt"} />
-            </div>
-            <p className="spread-hint mt-1 text-sm leading-relaxed">
-              This expresses how time-axis narrative flow (Tales) is gathered into a planetary lens of observation
-              (Gaze).
-            </p>
-            <p className="spread-hint mt-3 text-sm leading-relaxed">
-              <LatexInline tex={GLOBAL_LOGIC_EQUATION} />
-            </p>
-            <div className="spread-hint mt-3 space-y-1 text-sm leading-relaxed">
-              <p>
-                Layer 1: <LatexInline tex={"\\mathcal{W}"} /> (Will) - Primal vector
-              </p>
-              <p>
-                Layer 2: <LatexInline tex={"\\mathcal{S}"} /> (Stage) - Environmental filter
-              </p>
-              <p>
-                Layer 3: <LatexInline tex={"\\mathcal{A}"} /> (Actors) - Dynamic energy mapping
-              </p>
-              <p>
-                Layer 4: <LatexInline tex={"\\mathcal{F}"} /> (Fate) - System-level constraints
-              </p>
-              <p>
-                Layer 5: <LatexInline tex={"\\mathcal{T}"} /> (Tales) - Time-series unfolding
-              </p>
-              <p>
-                Layer 6: <LatexInline tex={"\\mathcal{G}"} /> (Gaze) - Observed reality
-              </p>
-            </div>
+          <div className={spread.modalHeader}>
+            <h3 className="spread-triad text-base font-semibold">Global Logic</h3>
+            <ModalCloseButton onClick={() => setIsGlobalHelpOpen(false)} />
           </div>
-        </div>
+          <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
+            <p>
+              <strong className="spread-triad font-semibold">Descending</strong> is the mode of unfoldment where will
+              crystallizes into reality through the layered spread.
+            </p>
+            <p>
+              <strong className="spread-triad font-semibold">Ascending</strong> is the mode of analysis where the
+              narrative is integrated back toward essence.
+            </p>
+          </div>
+          <div className="mt-2 text-sm text-indigo-100/90">
+            <LatexBlock tex={"\\mathcal{G} = \\int \\mathcal{T}\\,dt"} />
+          </div>
+          <p className="spread-hint mt-1 text-sm leading-relaxed">
+            This expresses how time-axis narrative flow (Tales) is gathered into a planetary lens of observation
+            (Gaze).
+          </p>
+          <p className="spread-hint mt-3 text-sm leading-relaxed">
+            <LatexInline tex={GLOBAL_LOGIC_EQUATION} />
+          </p>
+          <div className="spread-hint mt-3 space-y-1 text-sm leading-relaxed">
+            <p>
+              Layer 1: <LatexInline tex={"\\mathcal{W}"} /> (Will) - Primal vector
+            </p>
+            <p>
+              Layer 2: <LatexInline tex={"\\mathcal{S}"} /> (Stage) - Environmental filter
+            </p>
+            <p>
+              Layer 3: <LatexInline tex={"\\mathcal{A}"} /> (Actors) - Dynamic energy mapping
+            </p>
+            <p>
+              Layer 4: <LatexInline tex={"\\mathcal{F}"} /> (Fate) - System-level constraints
+            </p>
+            <p>
+              Layer 5: <LatexInline tex={"\\mathcal{T}"} /> (Tales) - Time-series unfolding
+            </p>
+            <p>
+              Layer 6: <LatexInline tex={"\\mathcal{G}"} /> (Gaze) - Observed reality
+            </p>
+          </div>
+        </SpreadDialog>
       ) : null}
 
       {selectedCard ? (
-        <div
-          role="dialog"
-          aria-modal="true"
+        <SpreadDialog
           aria-label="Card details"
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setSelectedCardId(null)}
+          z="card"
+          maxWidth="wide"
+          onClose={() => setSelectedCardId(null)}
         >
-          <div
-            className="spread-outer w-full max-w-2xl rounded-2xl border p-4"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="spread-triad text-base font-semibold">{selectedCardModalTitle}</h3>
-              <button
-                type="button"
-                onClick={() => setSelectedCardId(null)}
-                className="spread-btn-ghost rounded-full px-2 py-1 text-xs"
-              >
-                Close
-              </button>
-            </div>
-            <div className="mt-3 grid gap-4 md:grid-cols-[auto_1fr]">
-              <img
-                src={selectedCard.image}
-                alt={selectedCard.name}
-                className="mx-auto h-[16.8rem] w-[12rem] rounded-lg border border-white/15 object-cover object-center"
-              />
-              <div className="spread-hint text-sm leading-relaxed">
-                <p>
-                  <strong className="spread-triad font-semibold">Stats</strong>
-                </p>
-                <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
-                  {selectedCard.suit ? <p>Suit: {selectedCard.suit}</p> : null}
-                  {selectedCard.rank ? (
-                    <p>Rank: {selectedCard.arcanaTitle ? `${selectedCard.rank} (${selectedCard.arcanaTitle})` : selectedCard.rank}</p>
-                  ) : null}
-                  {selectedCard.number ? <p>Number: {selectedCard.number}</p> : null}
-                  {elementLine ? <p>Element: {elementLine}</p> : null}
-                  {selectedCard.astrology.sign ? <p>Sign: {symbolizeSignValue(selectedCard.astrology.sign)}</p> : null}
-                  {isSelectedPlanetLayer && selectedCard.astrology.planet ? (
-                    <p>Planet: {symbolizePlanetValue(selectedCard.astrology.planet)}</p>
-                  ) : null}
-                  {selectedCard.astrology.modality ? <p>Modality: {selectedCard.astrology.modality}</p> : null}
-                  {!isSelectedPlanetLayer && selectedCard.astrology.planetRuler ? (
-                    <p>Planet Ruler: {symbolizePlanetValue(selectedCard.astrology.planetRuler)}</p>
-                  ) : null}
-                  {isSelectedPlanetLayer && selectedCard.astrology.governingSign ? (
-                    <p>Governing Sign: {symbolizeSignValue(selectedCard.astrology.governingSign)}</p>
-                  ) : null}
-                  {selectedCard.dayOfWeek ? <p>Day: {selectedCard.dayOfWeek}</p> : null}
-                  {selectedCard.metal ? <p>Metal: {selectedCard.metal}</p> : null}
-                  {selectedCard.hebrewLetter ? <p>Hebrew Letter: {selectedCard.hebrewLetter}</p> : null}
-                  {selectedCard.treeOfLifePath ? <p>Path: {selectedCard.treeOfLifePath}</p> : null}
-                  {selectedCard.astrology.decanRange ? (
-                    <p>
-                      Span: {symbolizeSpan(selectedCard.astrology.decanRange, selectedCard.astrology.sign)}
-                    </p>
-                  ) : null}
-                  {selectedCard.astrology.dates ? <p>Dates: {selectedCard.astrology.dates}</p> : null}
-                </div>
+          <div className={spread.modalHeader}>
+            <h3 className="spread-triad text-base font-semibold">{selectedCardModalTitle}</h3>
+            <ModalCloseButton onClick={() => setSelectedCardId(null)} />
+          </div>
+          <div className="mt-3 grid gap-4 md:grid-cols-[auto_1fr]">
+            <img
+              src={selectedCard.image}
+              alt={selectedCard.name}
+              className="spread-card-modal-art"
+              decoding="async"
+            />
+            <div className="spread-hint text-sm leading-relaxed">
+              <p>
+                <strong className="spread-triad font-semibold">Stats</strong>
+              </p>
+              <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+                {selectedCard.suit ? <p>Suit: {selectedCard.suit}</p> : null}
+                {selectedCard.rank ? (
+                  <p>Rank: {selectedCard.arcanaTitle ? `${selectedCard.rank} (${selectedCard.arcanaTitle})` : selectedCard.rank}</p>
+                ) : null}
+                {selectedCard.number ? <p>Number: {selectedCard.number}</p> : null}
+                {elementLine ? <p>Element: {elementLine}</p> : null}
+                {selectedCard.astrology.sign ? <p>Sign: {symbolizeSignValue(selectedCard.astrology.sign)}</p> : null}
+                {isSelectedPlanetLayer && selectedCard.astrology.planet ? (
+                  <p>Planet: {symbolizePlanetValue(selectedCard.astrology.planet)}</p>
+                ) : null}
+                {selectedCard.astrology.modality ? <p>Modality: {selectedCard.astrology.modality}</p> : null}
+                {!isSelectedPlanetLayer && selectedCard.astrology.planetRuler ? (
+                  <p>Planet Ruler: {symbolizePlanetValue(selectedCard.astrology.planetRuler)}</p>
+                ) : null}
+                {isSelectedPlanetLayer && selectedCard.astrology.governingSign ? (
+                  <p>Governing Sign: {symbolizeSignValue(selectedCard.astrology.governingSign)}</p>
+                ) : null}
+                {selectedCard.dayOfWeek ? <p>Day: {selectedCard.dayOfWeek}</p> : null}
+                {selectedCard.metal ? <p>Metal: {selectedCard.metal}</p> : null}
+                {selectedCard.hebrewLetter ? <p>Hebrew Letter: {selectedCard.hebrewLetter}</p> : null}
+                {selectedCard.treeOfLifePath ? <p>Path: {selectedCard.treeOfLifePath}</p> : null}
+                {selectedCard.astrology.decanRange ? (
+                  <p>Span: {symbolizeSpan(selectedCard.astrology.decanRange, selectedCard.astrology.sign)}</p>
+                ) : null}
+                {selectedCard.astrology.dates ? <p>Dates: {selectedCard.astrology.dates}</p> : null}
               </div>
             </div>
           </div>
-        </div>
+        </SpreadDialog>
       ) : null}
     </main>
   );

@@ -21,6 +21,78 @@ body {
   font-family: "Inter", "Noto Sans JP", system-ui, sans-serif;
 }
 
+/* Paint/layout isolation for large stacked panels */
+.spread-panel {
+  content-visibility: auto;
+  contain-intrinsic-size: 420px;
+}
+
+.spread-tile,
+.spread-tile-back {
+  contain: layout paint style;
+}
+
+.spread-tile img,
+.spread-tile-back img {
+  display: block;
+  transform: translateZ(0);
+}
+
+/* Thumbnail + back tile outer size (one source of truth) */
+.spread-card-back-shell {
+  @apply h-[7.2rem] w-[5.2rem] sm:h-[8.4rem] sm:w-[6rem] overflow-hidden rounded-lg;
+}
+
+img.spread-card-thumb {
+  @apply h-[7.2rem] w-[5.2rem] object-cover object-center sm:h-[8.4rem] sm:w-[6rem];
+}
+
+img.spread-card-back-img {
+  @apply h-full w-full object-cover object-center;
+}
+
+img.spread-card-modal-art {
+  @apply mx-auto h-[16.8rem] w-[12rem] rounded-lg border border-white/15 object-cover object-center;
+}
+
+/* Reusable flex rows (Tailwind-only @apply) */
+.spread-card-row {
+  @apply flex justify-center gap-3;
+}
+.spread-triad-row {
+  @apply flex items-center justify-center gap-2;
+}
+
+.spread-panel-fade {
+  animation: panelFadeIn 220ms ease-out both;
+}
+
+.spread-fade-in {
+  animation: tileFadeIn 180ms ease-out both;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tileFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Descending (Atziluth → Assiah): indigo / abyss */
 main[data-theme="descending"] {
   min-height: 100vh;
@@ -227,4 +299,19 @@ main[data-theme="ascending"] .spread-float-reset {
 }
 main[data-theme="ascending"] .spread-float-reset:hover {
   background: rgba(60, 20, 32, 0.88);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spread-inner,
+  .spread-tile,
+  .spread-toggle-knob,
+  .spread-float-next,
+  .spread-float-reset,
+  .spread-btn-go,
+  .spread-btn-ghost,
+  .spread-fade-in,
+  .spread-panel-fade {
+    transition: none !important;
+    animation: none !important;
+  }
 }
