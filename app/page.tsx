@@ -187,6 +187,19 @@ function LatexInline({ tex }: { tex: string }) {
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+function LatexBlock({ tex }: { tex: string }) {
+  const html = useMemo(
+    () =>
+      katex.renderToString(tex, {
+        throwOnError: false,
+        displayMode: true
+      }),
+    [tex]
+  );
+
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 function drawUnique(pool: Card[], count: number): Card[] {
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
@@ -675,6 +688,23 @@ export default function Page() {
                 Close
               </button>
             </div>
+            <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
+              <p>
+                <strong className="spread-triad font-semibold">Descending</strong> is the mode of unfoldment where will
+                crystallizes into reality through the layered spread.
+              </p>
+              <p>
+                <strong className="spread-triad font-semibold">Ascending</strong> is the mode of analysis where the
+                narrative is integrated back toward essence.
+              </p>
+            </div>
+            <div className="mt-2 text-sm text-indigo-100/90">
+              <LatexBlock tex={"\\mathcal{G} = \\int \\mathcal{T}\\,dt"} />
+            </div>
+            <p className="spread-hint mt-1 text-sm leading-relaxed">
+              This expresses how time-axis narrative flow (Tales) is gathered into a planetary lens of observation
+              (Gaze).
+            </p>
             <p className="spread-hint mt-3 text-sm leading-relaxed">
               <LatexInline tex={GLOBAL_LOGIC_EQUATION} />
             </p>
