@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Card = {
   id: string;
@@ -131,6 +131,11 @@ const LAYERS: Layer[] = [
   }
 ];
 
+/** L1 (top, Atziluth) → L6 (bottom, Assiah) — emantion downward on screen */
+const REVEAL_ATZILUTH_TO_ASSIAH: number[] = [0, 1, 2, 3, 4, 5];
+/** L6 (Assiah) → L1 (Atziluth) — return upward on screen */
+const REVEAL_ASSIAH_TO_ATZILUTH: number[] = [5, 4, 3, 2, 1, 0];
+
 function drawUnique(pool: Card[], count: number): Card[] {
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
@@ -143,13 +148,21 @@ function cap(value: string): string {
 export default function Page() {
   const [step, setStep] = useState(0);
   const [drawn, setDrawn] = useState<Record<string, Card[]>>({});
+  /** true = descending: first reveal = Layer 1 (Atziluth, top) … last = Layer 6 (Assiah, bottom) */
+  const [revealAtziluthToAssiah, setRevealAtziluthToAssiah] = useState(true);
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const cardBackImage = "/images/card_back.jpg";
+
+  const revealOrder = useMemo(
+    () => (revealAtziluthToAssiah ? REVEAL_ATZILUTH_TO_ASSIAH : REVEAL_ASSIAH_TO_ATZILUTH),
+    [revealAtziluthToAssiah]
+  );
 
   const completed = step === LAYERS.length;
   const nextStep = () => {
     if (step >= LAYERS.length) return;
-    const layer = LAYERS[step];
+    const layerIndex = revealOrder[step];
+    const layer = LAYERS[layerIndex];
     setDrawn((prev) => ({ ...prev, [layer.key]: drawUnique(layer.pool, layer.drawCount) }));
     setStep((prev) => prev + 1);
   };
@@ -157,11 +170,19 @@ export default function Page() {
   const reset = () => {
     setDrawn({});
     setStep(0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const toggleRevealOrder = () => {
+    setRevealAtziluthToAssiah((v) => !v);
+    setDrawn({});
+    setStep(0);
   };
 
   useEffect(() => {
     if (step === 0) return;
-    const openedLayer = LAYERS[step - 1];
+    const layerIndex = revealOrder[step - 1];
+    const openedLayer = LAYERS[layerIndex];
     const target = layerRefs.current[openedLayer.key];
     if (!target) return;
 
@@ -169,7 +190,7 @@ export default function Page() {
       behavior: "smooth",
       block: "center"
     });
-  }, [step]);
+  }, [step, revealOrder]);
 
   useEffect(() => {
     const uniqueImages = Array.from(
@@ -184,7 +205,7 @@ export default function Page() {
 
   function renderCards(layerIndex: number) {
     const layer = LAYERS[layerIndex];
-    const opened = layerIndex < step;
+    const opened = (drawn[layer.key]?.length ?? 0) > 0;
 
     if (opened) {
       const cards = drawn[layer.key] ?? [];
@@ -194,7 +215,7 @@ export default function Page() {
           initial={{ opacity: 0, y: 8, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="overflow-hidden rounded-lg border border-white/15 bg-slate-950/50 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
+          className="spread-tile overflow-hidden rounded-lg border"
         >
           <img
             src={card.image}
@@ -210,7 +231,7 @@ export default function Page() {
       <div
         key={`${layer.key}-placeholder-${placeholderIdx}`}
         aria-label="card back"
-        className="h-[7.2rem] w-[5.2rem] rounded-lg border border-dashed border-indigo-200/30 bg-slate-950/30 bg-cover bg-center sm:h-[8.4rem] sm:w-[6rem]"
+        className="spread-tile-back h-[7.2rem] w-[5.2rem] rounded-lg border border-dashed bg-cover bg-center sm:h-[8.4rem] sm:w-[6rem]"
         style={{ backgroundImage: `url(${cardBackImage})` }}
       >
         <span className="sr-only">Card Back</span>
@@ -219,41 +240,79 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+    <main
+      data-theme={revealAtziluthToAssiah ? "descending" : "ascending"}
+      className="min-h-screen px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8"
+    >
       <div className="mx-auto grid w-full max-w-7xl gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <section className="rounded-2xl border border-indigo-100/10 bg-white/5 p-5 shadow-glow backdrop-blur-md lg:sticky lg:top-4 lg:self-start">
-          <h1 className="text-2xl font-semibold tracking-wide text-indigo-100 sm:text-3xl">
+        <section className="spread-outer rounded-2xl border p-5 backdrop-blur-md transition-colors duration-300 lg:sticky lg:top-4 lg:self-start">
+          <h1 className="spread-title text-2xl font-semibold tracking-wide sm:text-3xl">
             The Great Wheel Spread
           </h1>
 
-          <div className="mt-5 flex flex-col gap-3">
+          <div className="mt-3">
+            <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
+            <div className="mt-1.5 flex w-max max-w-full items-center gap-2">
+              <span
+                className={`shrink-0 text-xs ${
+                  !revealAtziluthToAssiah ? "spread-txt-strong" : "spread-txt-faint"
+                }`}
+              >
+                Ascending
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={revealAtziluthToAssiah}
+                aria-label="Toggle between descending (Atziluth to Assiah) and ascending (Assiah to Atziluth)"
+                onClick={toggleRevealOrder}
+                className="spread-toggle relative h-8 w-14 shrink-0 rounded-full p-0.5 transition"
+              >
+                <span
+                  aria-hidden
+                  className={`spread-toggle-knob absolute top-1/2 h-6 w-6 -translate-y-1/2 rounded-full transition-all ${
+                    revealAtziluthToAssiah ? "right-1" : "left-1"
+                  }`}
+                />
+              </button>
+              <span
+                className={`shrink-0 text-xs ${
+                  revealAtziluthToAssiah ? "spread-txt-strong" : "spread-txt-faint"
+                }`}
+              >
+                Descending
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={nextStep}
               disabled={completed}
-              className="rounded-full bg-indigo-400/20 px-5 py-2 text-sm font-medium text-indigo-100 ring-1 ring-indigo-200/30 backdrop-blur transition hover:bg-indigo-300/25 disabled:cursor-not-allowed disabled:opacity-40"
+              className="spread-btn-go min-w-0 flex-1 rounded-full px-3 py-2 text-xs font-medium backdrop-blur transition disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {completed ? "All Layers Revealed" : `Draw Next Layer (${step + 1} of 6)`}
+              {completed ? "All Revealed" : `Draw (${step + 1}/6)`}
             </button>
             <button
               type="button"
               onClick={reset}
-              className="rounded-full bg-white/5 px-5 py-2 text-sm font-medium text-slate-200 ring-1 ring-white/20 transition hover:bg-white/10"
+              className="spread-btn-ghost min-w-0 flex-1 rounded-full px-3 py-2 text-xs font-medium transition"
             >
-              Reset Spread
+              Reset
             </button>
           </div>
         </section>
-        <section className="rounded-2xl border border-indigo-100/10 bg-white/5 px-4 py-6 shadow-glow backdrop-blur-md sm:px-8">
+        <section className="spread-outer rounded-2xl border px-4 py-6 backdrop-blur-md transition-colors duration-300 sm:px-8">
           <div className="flex flex-col items-center gap-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+              className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Atziluth</p>
+              <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Atziluth</p>
               <div className="flex flex-col items-center">
-                <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                <p className="spread-triad mb-3 text-center text-sm font-semibold tracking-wide">
                   {LAYERS[0].triad.join(" — ")}
                 </p>
                 <div
@@ -264,7 +323,7 @@ export default function Page() {
                 >
                   {renderCards(0)}
                 </div>
-                <p className="mt-4 mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                <p className="spread-triad mt-4 mb-3 text-center text-sm font-semibold tracking-wide">
                   {LAYERS[1].triad.join(" — ")}
                 </p>
                 <div
@@ -281,11 +340,11 @@ export default function Page() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+              className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Briah</p>
+              <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Briah</p>
               <div className="flex flex-col items-center">
-                <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                <p className="spread-triad mb-3 text-center text-sm font-semibold tracking-wide">
                   {LAYERS[2].triad.join(" — ")}
                 </p>
                 <div
@@ -296,7 +355,7 @@ export default function Page() {
                 >
                   {renderCards(2)}
                 </div>
-                <p className="mt-4 mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                <p className="spread-triad mt-4 mb-3 text-center text-sm font-semibold tracking-wide">
                   {LAYERS[3].triad.join(" — ")}
                 </p>
                 <div
@@ -313,10 +372,10 @@ export default function Page() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+              className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Yetzirah</p>
-              <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+              <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Yetzirah</p>
+              <p className="spread-triad mb-3 text-center text-sm font-semibold tracking-wide">
                 {LAYERS[4].triad.join(" — ")}
               </p>
               <div
@@ -334,11 +393,11 @@ export default function Page() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-md rounded-xl border border-indigo-200/20 bg-slate-950/25 p-3"
+              className="spread-inner w-full max-w-md rounded-xl border p-3 transition-colors duration-300"
             >
-              <p className="mb-3 text-center text-xs font-medium tracking-[0.12em] text-indigo-200/80">Assiah</p>
+              <p className="spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]">Assiah</p>
               <div className="flex flex-col items-center">
-                <p className="mb-3 text-center text-sm font-semibold tracking-wide text-indigo-100/90">
+                <p className="spread-triad mb-3 text-center text-sm font-semibold tracking-wide">
                   {LAYERS[5].triad.join(" — ")}
                 </p>
                 <div
@@ -355,19 +414,19 @@ export default function Page() {
         </section>
       </div>
 
-      <div className="fixed bottom-4 right-4 z-50 flex gap-2 lg:hidden">
+      <div className="fixed bottom-4 right-4 z-50 flex flex-wrap items-stretch justify-end gap-3 lg:hidden">
         <button
           type="button"
           onClick={nextStep}
           disabled={completed}
-          className="rounded-full bg-indigo-400/30 px-3 py-2 text-xs font-medium text-indigo-50 ring-1 ring-indigo-200/40 backdrop-blur transition hover:bg-indigo-300/35 disabled:cursor-not-allowed disabled:opacity-40"
+          className="spread-float-next min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold backdrop-blur transition disabled:cursor-not-allowed disabled:opacity-40"
         >
           {completed ? "Complete" : `Next (${step + 1} of 6)`}
         </button>
         <button
           type="button"
           onClick={reset}
-          className="rounded-full bg-slate-900/70 px-3 py-2 text-xs font-medium text-slate-100 ring-1 ring-white/30 backdrop-blur transition hover:bg-slate-800/80"
+          className="spread-float-reset min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold backdrop-blur transition"
         >
           Reset
         </button>
