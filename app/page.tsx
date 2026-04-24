@@ -151,6 +151,7 @@ export default function Page() {
   /** true = descending: first reveal = Layer 1 (Atziluth, top) … last = Layer 6 (Assiah, bottom) */
   const [revealAtziluthToAssiah, setRevealAtziluthToAssiah] = useState(true);
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const rightPanelRef = useRef<HTMLDivElement | null>(null);
   const cardBackImage = "/images/card_back.jpg";
 
   const revealOrder = useMemo(
@@ -171,12 +172,14 @@ export default function Page() {
     setDrawn({});
     setStep(0);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    rightPanelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const toggleRevealOrder = () => {
     setRevealAtziluthToAssiah((v) => !v);
     setDrawn({});
     setStep(0);
+    rightPanelRef.current?.scrollTo({ top: 0, behavior: "auto" });
   };
 
   useEffect(() => {
@@ -242,10 +245,10 @@ export default function Page() {
   return (
     <main
       data-theme={revealAtziluthToAssiah ? "descending" : "ascending"}
-      className="min-h-screen px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8"
+      className="flex min-h-screen flex-col px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8 lg:box-border lg:min-h-0 lg:h-[100dvh] lg:overflow-hidden lg:px-6 lg:py-6"
     >
-      <div className="mx-auto grid w-full max-w-7xl gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <section className="spread-outer rounded-2xl border p-5 backdrop-blur-md transition-colors duration-300 lg:sticky lg:top-4 lg:self-start">
+      <div className="mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col gap-5 max-lg:min-h-0 lg:min-h-0 lg:max-h-full lg:flex-row">
+        <section className="spread-outer w-full shrink-0 rounded-2xl border p-5 backdrop-blur-md transition-colors duration-300 lg:w-[18rem] lg:max-w-[18rem]">
           <h1 className="spread-title text-2xl font-semibold tracking-wide sm:text-3xl">
             The Great Wheel Spread
           </h1>
@@ -285,25 +288,28 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-3 grid w-full grid-cols-2 gap-2">
             <button
               type="button"
               onClick={nextStep}
               disabled={completed}
-              className="spread-btn-go min-w-0 flex-1 rounded-full px-3 py-2 text-xs font-medium backdrop-blur transition disabled:cursor-not-allowed disabled:opacity-40"
+              className="spread-btn-go min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium backdrop-blur transition disabled:cursor-not-allowed disabled:opacity-40"
             >
               {completed ? "All Revealed" : `Draw (${step + 1}/6)`}
             </button>
             <button
               type="button"
               onClick={reset}
-              className="spread-btn-ghost min-w-0 flex-1 rounded-full px-3 py-2 text-xs font-medium transition"
+              className="spread-btn-ghost min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium transition"
             >
               Reset
             </button>
           </div>
         </section>
-        <section className="spread-outer rounded-2xl border px-4 py-6 backdrop-blur-md transition-colors duration-300 sm:px-8">
+        <section
+          ref={rightPanelRef}
+          className="spread-outer w-full min-w-0 overflow-x-hidden rounded-2xl border px-4 py-6 backdrop-blur-md transition-colors duration-300 sm:px-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain"
+        >
           <div className="flex flex-col items-center gap-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
