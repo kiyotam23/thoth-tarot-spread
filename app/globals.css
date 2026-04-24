@@ -67,11 +67,6 @@ img.spread-card-modal-art {
   animation: panelFadeIn 220ms ease-out both;
 }
 
-/* Revealed card: no opacity from 0 (avoids “blank” frame while face loads) */
-.spread-tile-lift {
-  animation: tileLift 200ms ease-out both;
-}
-
 @keyframes panelFadeIn {
   from {
     opacity: 0;
@@ -80,15 +75,6 @@ img.spread-card-modal-art {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes tileLift {
-  from {
-    transform: translateY(6px) scale(0.99);
-  }
-  to {
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -308,7 +294,6 @@ main[data-theme="ascending"] .spread-float-reset:hover {
   .spread-float-reset,
   .spread-btn-go,
   .spread-btn-ghost,
-  .spread-tile-lift,
   .spread-panel-fade {
     transition: none !important;
     animation: none !important;

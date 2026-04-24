@@ -544,7 +544,7 @@ export default function Page() {
         if (opened) {
           const cards = drawn[layer.key] ?? [];
           return cards.map((card) => (
-            <div key={card.id} className="spread-tile spread-tile-lift spread-card-back-shell border">
+            <div key={card.id} className="spread-tile spread-card-back-shell border">
               <RevealedCardButton
                 card={card}
                 cardBackSrc={cardBackImage}
