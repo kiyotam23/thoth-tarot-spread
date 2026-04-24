@@ -292,6 +292,61 @@ function drawUnique(pool: Card[], count: number): Card[] {
   return cloned.slice(0, max);
 }
 
+function preloadImageUrls(urls: string[]) {
+  for (const src of urls) {
+    const im = new Image();
+    im.src = src;
+  }
+}
+
+function RevealedCardButton({
+  card,
+  cardBackSrc,
+  onOpen
+}: {
+  card: Card;
+  cardBackSrc: string;
+  onOpen: () => void;
+}) {
+  const [faceReady, setFaceReady] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="relative block h-full w-full min-h-0 overflow-hidden rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
+      aria-label={`Open details for ${card.name}`}
+    >
+      <img
+        src={cardBackSrc}
+        alt=""
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
+        loading="eager"
+        decoding="async"
+        draggable={false}
+        aria-hidden
+      />
+      <img
+        src={card.image}
+        alt={card.name}
+        className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200 ease-out ${
+          faceReady ? "opacity-100" : "opacity-0"
+        }`}
+        loading="eager"
+        decoding="async"
+        draggable={false}
+        onLoad={() => setFaceReady(true)}
+        onError={() => setFaceReady(true)}
+        ref={(el) => {
+          if (el?.complete && el.naturalWidth > 0) {
+            setFaceReady(true);
+          }
+        }}
+      />
+    </button>
+  );
+}
+
 function cap(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -442,7 +497,9 @@ export default function Page() {
     if (step >= LAYERS.length) return;
     const layerIndex = revealOrder[step];
     const layer = LAYERS[layerIndex];
-    setDrawn((prev) => ({ ...prev, [layer.key]: drawUnique(layer.pool, layer.drawCount) }));
+    const picked = drawUnique(layer.pool, layer.drawCount);
+    preloadImageUrls(picked.map((c) => c.image));
+    setDrawn((prev) => ({ ...prev, [layer.key]: picked }));
     setStep((prev) => prev + 1);
   }, [revealOrder, step]);
 
@@ -487,21 +544,12 @@ export default function Page() {
         if (opened) {
           const cards = drawn[layer.key] ?? [];
           return cards.map((card) => (
-            <div key={card.id} className="spread-tile spread-fade-in spread-card-back-shell border">
-              <button
-                type="button"
-                onClick={() => setSelectedCardId(card.id)}
-                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
-                aria-label={`Open details for ${card.name}`}
-              >
-                <img
-                  src={card.image}
-                  alt={card.name}
-                  className="spread-card-thumb"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </button>
+            <div key={card.id} className="spread-tile spread-tile-lift spread-card-back-shell border">
+              <RevealedCardButton
+                card={card}
+                cardBackSrc={cardBackImage}
+                onOpen={() => setSelectedCardId(card.id)}
+              />
             </div>
           ));
         }
