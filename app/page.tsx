@@ -141,6 +141,15 @@ const REVEAL_ASSIAH_TO_ATZILUTH: number[] = [5, 4, 3, 2, 1, 0];
 const GLOBAL_LOGIC_EQUATION =
   "\\mathrm{Result} = \\mathcal{G} \\circ \\mathcal{T} \\circ \\mathcal{F} \\circ \\mathcal{A} \\circ \\mathcal{S}(W)";
 
+const LAYER_OPERATOR_TEX: Record<Layer["key"], string> = {
+  root: "\\mathcal{W}",
+  womb: "\\mathcal{S}",
+  agents: "\\mathcal{A}",
+  destiny: "\\mathcal{F}",
+  events: "\\mathcal{T}",
+  focus: "\\mathcal{G}"
+};
+
 const LAYER_HELP: Record<Layer["key"], { title: string; body: string; formula?: string }> = {
   root: {
     title: "Will — Intent — Spark",
@@ -200,6 +209,19 @@ function LatexBlock({ tex }: { tex: string }) {
   return <div dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+function renderTriadWithOperator(layer: Layer) {
+  const [first] = layer.triad;
+  const initial = first.charAt(0).toUpperCase();
+  const text = `(${first})`;
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <LatexInline tex={`\\mathcal{${initial}}`} />
+      <span>{text}</span>
+    </span>
+  );
+}
+
 function drawUnique(pool: Card[], count: number): Card[] {
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
@@ -250,7 +272,10 @@ function symbolizePlanetValue(value: string): string {
     .split("/")
     .map((part) => part.trim())
     .filter(Boolean)
-    .map((part) => PLANET_SYMBOL[part] ?? part)
+    .map((part) => {
+      const symbol = PLANET_SYMBOL[part];
+      return symbol ? `${symbol} ${part}` : part;
+    })
     .join(" / ");
 }
 
@@ -259,7 +284,10 @@ function symbolizeSignValue(value: string): string {
     .split("/")
     .map((part) => part.trim())
     .filter(Boolean)
-    .map((part) => SIGN_SYMBOL[part] ?? part)
+    .map((part) => {
+      const symbol = SIGN_SYMBOL[part];
+      return symbol ? `${symbol} ${part}` : part;
+    })
     .join(" / ");
 }
 
@@ -327,6 +355,13 @@ export default function Page() {
   );
   const selectedCard = selectedCardId ? CARD_INDEX[selectedCardId] : null;
   const isSelectedPlanetLayer = selectedCard?.layer === 6;
+  const selectedCardModalTitle =
+    selectedCard &&
+    (selectedCard.layer === 4 || selectedCard.layer === 6) &&
+    selectedCard.rank &&
+    selectedCard.arcanaTitle
+      ? `${selectedCard.rank} · ${selectedCard.arcanaTitle}`
+      : selectedCard?.name ?? "";
   const elementLine = selectedCard
     ? formatElementLine(selectedCard.elementalAttribution, selectedCard.astrology.element)
     : null;
@@ -425,7 +460,7 @@ export default function Page() {
     const layer = LAYERS[layerIndex];
     return (
       <div className={`flex items-center justify-center gap-2 ${className}`}>
-        <p className="spread-triad text-center text-sm font-semibold tracking-wide">{layer.triad.join(" — ")}</p>
+        <p className="spread-triad text-center text-sm font-semibold tracking-wide">{renderTriadWithOperator(layer)}</p>
         <button
           type="button"
           aria-label={`Help for ${layer.triad.join(" — ")}`}
@@ -444,8 +479,8 @@ export default function Page() {
       className="flex min-h-screen flex-col px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8 lg:box-border lg:min-h-0 lg:h-[100dvh] lg:overflow-hidden lg:px-6 lg:py-6"
     >
       <div className="mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col gap-5 max-lg:min-h-0 lg:min-h-0 lg:max-h-full lg:flex-row">
-        <section className="spread-outer w-full shrink-0 rounded-2xl border p-5 backdrop-blur-md transition-colors duration-300 lg:w-[18rem] lg:max-w-[18rem]">
-          <h1 className="spread-title text-2xl font-semibold tracking-wide sm:text-3xl">
+        <section className="spread-outer w-full shrink-0 rounded-2xl border p-5 backdrop-blur-md transition-colors duration-300 lg:w-[20rem] lg:max-w-[20rem]">
+          <h1 className="spread-title whitespace-nowrap text-xl font-semibold tracking-wide sm:text-2xl">
             The Great Wheel Spread
           </h1>
 
@@ -646,7 +681,12 @@ export default function Page() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="spread-triad text-base font-semibold">{LAYER_HELP[activeHelpKey].title}</h3>
+                <h3 className="spread-triad text-base font-semibold">
+                  {renderTriadWithOperator(LAYERS.find((layer) => layer.key === activeHelpKey)!)}
+                </h3>
+                <p className="spread-hint mt-1 text-xs">
+                  {LAYERS.find((layer) => layer.key === activeHelpKey)!.triad.slice(1).join(", ")}
+                </p>
               </div>
               <button
                 type="button"
@@ -709,12 +749,24 @@ export default function Page() {
               <LatexInline tex={GLOBAL_LOGIC_EQUATION} />
             </p>
             <div className="spread-hint mt-3 space-y-1 text-sm leading-relaxed">
-              <p>Layer 1: W (Will) - Primal vector</p>
-              <p>Layer 2: S (Stage) - Environmental filter</p>
-              <p>Layer 3: A (Actors) - Dynamic energy mapping</p>
-              <p>Layer 4: F (Fate) - System-level constraints</p>
-              <p>Layer 5: T (Tales) - Time-series unfolding</p>
-              <p>Layer 6: G (Gaze) - Observed reality</p>
+              <p>
+                Layer 1: <LatexInline tex={"\\mathcal{W}"} /> (Will) - Primal vector
+              </p>
+              <p>
+                Layer 2: <LatexInline tex={"\\mathcal{S}"} /> (Stage) - Environmental filter
+              </p>
+              <p>
+                Layer 3: <LatexInline tex={"\\mathcal{A}"} /> (Actors) - Dynamic energy mapping
+              </p>
+              <p>
+                Layer 4: <LatexInline tex={"\\mathcal{F}"} /> (Fate) - System-level constraints
+              </p>
+              <p>
+                Layer 5: <LatexInline tex={"\\mathcal{T}"} /> (Tales) - Time-series unfolding
+              </p>
+              <p>
+                Layer 6: <LatexInline tex={"\\mathcal{G}"} /> (Gaze) - Observed reality
+              </p>
             </div>
           </div>
         </div>
@@ -733,7 +785,7 @@ export default function Page() {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
-              <h3 className="spread-triad text-base font-semibold">{selectedCard.name}</h3>
+              <h3 className="spread-triad text-base font-semibold">{selectedCardModalTitle}</h3>
               <button
                 type="button"
                 onClick={() => setSelectedCardId(null)}
