@@ -196,6 +196,106 @@ function cap(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+const SIGN_SYMBOL: Record<string, string> = {
+  Aries: "♈︎",
+  Taurus: "♉︎",
+  Gemini: "♊︎",
+  Cancer: "♋︎",
+  Leo: "♌︎",
+  Virgo: "♍︎",
+  Libra: "♎︎",
+  Scorpio: "♏︎",
+  Sagittarius: "♐︎",
+  Capricorn: "♑︎",
+  Aquarius: "♒︎",
+  Pisces: "♓︎"
+};
+
+const PLANET_SYMBOL: Record<string, string> = {
+  Sun: "☉",
+  Moon: "☾",
+  Mercury: "☿",
+  Venus: "♀",
+  Mars: "♂",
+  Jupiter: "♃",
+  Saturn: "♄",
+  Uranus: "♅",
+  Neptune: "♆",
+  Pluto: "♇"
+};
+
+const ELEMENT_SYMBOL: Record<string, string> = {
+  Fire: "🜂",
+  Water: "🜄",
+  Air: "🜁",
+  Earth: "🜃"
+};
+
+function symbolizePlanetValue(value: string): string {
+  return value
+    .replace(/[☉☾☿♀♂♃♄♅♆♇]\s*/g, "")
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => PLANET_SYMBOL[part] ?? part)
+    .join(" / ");
+}
+
+function symbolizeSignValue(value: string): string {
+  return value
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => SIGN_SYMBOL[part] ?? part)
+    .join(" / ");
+}
+
+function symbolizeElementalAttribution(value: string): string {
+  return value
+    .split(" of ")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => ELEMENT_SYMBOL[part] ?? part)
+    .join(" of ");
+}
+
+function formatElementLabel(value: string): string {
+  const symbol = ELEMENT_SYMBOL[value];
+  return symbol ? `${symbol} ${value}` : value;
+}
+
+function formatElementLine(elementalAttribution: string | null, astrologyElement: string | null): string | null {
+  if (elementalAttribution) {
+    return elementalAttribution
+      .split(" of ")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => formatElementLabel(part))
+      .join(" of ");
+  }
+  if (astrologyElement) {
+    return formatElementLabel(astrologyElement);
+  }
+  return null;
+}
+
+function symbolizeSpan(decanRange: string, sign: string | null): string {
+  const hasSignText = /[A-Za-z]/.test(decanRange);
+  if (hasSignText) {
+    const signs = Object.keys(SIGN_SYMBOL);
+    let normalized = decanRange;
+    signs.forEach((s) => {
+      const regex = new RegExp(`\\b${s}\\b`, "g");
+      normalized = normalized.replace(regex, SIGN_SYMBOL[s]);
+    });
+    return normalized;
+  }
+  if (sign) {
+    return `${symbolizeSignValue(sign)} ${decanRange}`;
+  }
+  return decanRange;
+}
+
 export default function Page() {
   const [step, setStep] = useState(0);
   const [drawn, setDrawn] = useState<Record<string, Card[]>>({});
@@ -214,6 +314,9 @@ export default function Page() {
   );
   const selectedCard = selectedCardId ? CARD_INDEX[selectedCardId] : null;
   const isSelectedPlanetLayer = selectedCard?.layer === 6;
+  const elementLine = selectedCard
+    ? formatElementLine(selectedCard.elementalAttribution, selectedCard.astrology.element)
+    : null;
 
   const completed = step === LAYERS.length;
   const nextStep = () => {
@@ -625,18 +728,17 @@ export default function Page() {
                     <p>Rank: {selectedCard.arcanaTitle ? `${selectedCard.rank} (${selectedCard.arcanaTitle})` : selectedCard.rank}</p>
                   ) : null}
                   {selectedCard.number ? <p>Number: {selectedCard.number}</p> : null}
-                  {selectedCard.elementalAttribution ? <p>Element: {selectedCard.elementalAttribution}</p> : null}
-                  {selectedCard.astrology.sign ? <p>Sign: {selectedCard.astrology.sign}</p> : null}
-                  {selectedCard.astrology.element ? <p>Element Type: {selectedCard.astrology.element}</p> : null}
+                  {elementLine ? <p>Element: {elementLine}</p> : null}
+                  {selectedCard.astrology.sign ? <p>Sign: {symbolizeSignValue(selectedCard.astrology.sign)}</p> : null}
                   {isSelectedPlanetLayer && selectedCard.astrology.planet ? (
-                    <p>Planet: {selectedCard.astrology.planet}</p>
+                    <p>Planet: {symbolizePlanetValue(selectedCard.astrology.planet)}</p>
                   ) : null}
                   {selectedCard.astrology.modality ? <p>Modality: {selectedCard.astrology.modality}</p> : null}
                   {!isSelectedPlanetLayer && selectedCard.astrology.planetRuler ? (
-                    <p>Planet Ruler: {selectedCard.astrology.planetRuler}</p>
+                    <p>Planet Ruler: {symbolizePlanetValue(selectedCard.astrology.planetRuler)}</p>
                   ) : null}
                   {isSelectedPlanetLayer && selectedCard.astrology.governingSign ? (
-                    <p>Governing Sign: {selectedCard.astrology.governingSign}</p>
+                    <p>Governing Sign: {symbolizeSignValue(selectedCard.astrology.governingSign)}</p>
                   ) : null}
                   {selectedCard.dayOfWeek ? <p>Day: {selectedCard.dayOfWeek}</p> : null}
                   {selectedCard.metal ? <p>Metal: {selectedCard.metal}</p> : null}
@@ -644,10 +746,7 @@ export default function Page() {
                   {selectedCard.treeOfLifePath ? <p>Path: {selectedCard.treeOfLifePath}</p> : null}
                   {selectedCard.astrology.decanRange ? (
                     <p>
-                      Span:{" "}
-                      {selectedCard.astrology.sign
-                        ? `${selectedCard.astrology.sign} ${selectedCard.astrology.decanRange}`
-                        : selectedCard.astrology.decanRange}
+                      Span: {symbolizeSpan(selectedCard.astrology.decanRange, selectedCard.astrology.sign)}
                     </p>
                   ) : null}
                   {selectedCard.astrology.dates ? <p>Dates: {selectedCard.astrology.dates}</p> : null}

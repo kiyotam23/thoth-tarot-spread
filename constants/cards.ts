@@ -125,8 +125,8 @@ const ZODIAC_DESTINY = [
     image: "/images/the-emperor.png",
     element: "Fire",
     modality: "Cardinal",
-    hebrewLetter: "צ (Tzaddi)",
-    treeOfLifePath: "7. Netzach - 9. Yesod"
+    hebrewLetter: "ה (Heh)",
+    treeOfLifePath: "4. Chesed - 6. Tiphareth"
   },
   {
     id: "taurus-hierophant",
@@ -235,7 +235,7 @@ const ZODIAC_DESTINY = [
     image: "/images/the-star.png",
     element: "Air",
     modality: "Fixed",
-    hebrewLetter: "ה (Heh)",
+    hebrewLetter: "צ (Tzaddi)",
     treeOfLifePath: "2. Chokmah - 6. Tiphareth"
   },
   {
@@ -259,11 +259,11 @@ const ZODIAC_RULER: Record<string, string> = {
   Leo: "Sun",
   Virgo: "Mercury",
   Libra: "Venus",
-  Scorpio: "Mars",
+  Scorpio: "Pluto",
   Sagittarius: "Jupiter",
   Capricorn: "Saturn",
-  Aquarius: "Saturn",
-  Pisces: "Jupiter"
+  Aquarius: "Uranus",
+  Pisces: "Neptune"
 };
 
 const PLANET_FOCUS = [
@@ -625,7 +625,7 @@ const cards: ThothCardMeta[] = [];
         planet: signDecan.planet,
         governingSign: null,
         modality,
-        planetRuler: ZODIAC_RULER[sign],
+        planetRuler: signDecan.planet,
         decanRange: `${rangeStart}°-${rangeEnd}°`,
         dates: signDecan.dates
       },
