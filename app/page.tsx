@@ -491,6 +491,14 @@ export default function Page() {
   const elementLine = selectedCard
     ? formatElementLine(selectedCard.elementalAttribution, selectedCard.astrology.element)
     : null;
+  /** Minors 2–10: `rank` is the string form of `number` — hide Rank to avoid duplicating Number */
+  const showRankInModal =
+    selectedCard?.rank &&
+    !(
+      selectedCard.number != null &&
+      selectedCard.rank != null &&
+      selectedCard.rank === String(selectedCard.number)
+    );
 
   const completed = step === LAYERS.length;
   const nextStep = useCallback(() => {
@@ -803,7 +811,7 @@ export default function Page() {
               </p>
               <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
                 {selectedCard.suit ? <p>Suit: {selectedCard.suit}</p> : null}
-                {selectedCard.rank ? (
+                {showRankInModal ? (
                   <p>Rank: {selectedCard.arcanaTitle ? `${selectedCard.rank} (${selectedCard.arcanaTitle})` : selectedCard.rank}</p>
                 ) : null}
                 {selectedCard.number ? <p>Number: {selectedCard.number}</p> : null}
