@@ -15,21 +15,21 @@ const spread = {
   main: "flex min-h-screen flex-col px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8 lg:box-border lg:min-h-0 lg:h-[100dvh] lg:overflow-hidden lg:px-6 lg:py-6",
   shell: "mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col gap-5 max-lg:min-h-0 lg:min-h-0 lg:max-h-full lg:flex-row",
   rail:
-    "spread-outer w-full shrink-0 rounded-2xl border p-5 supports-[backdrop-filter]:backdrop-blur-sm lg:w-[20rem] lg:max-w-[20rem] lg:supports-[backdrop-filter]:backdrop-blur-md transition-colors duration-300",
+    "spread-outer w-full shrink-0 rounded-2xl border p-5 supports-[backdrop-filter]:backdrop-blur-sm transition-colors duration-300 max-lg:fixed max-lg:bottom-3 max-lg:inset-x-3 max-lg:w-auto max-lg:z-40 lg:w-[20rem] lg:max-w-[20rem] lg:supports-[backdrop-filter]:backdrop-blur-md",
   canvas:
-    "spread-outer w-full min-w-0 overflow-x-hidden rounded-2xl border px-4 py-6 supports-[backdrop-filter]:backdrop-blur-sm lg:supports-[backdrop-filter]:backdrop-blur-md transition-colors duration-300 sm:px-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain",
+    "spread-outer w-full min-w-0 overflow-x-hidden rounded-2xl border px-4 py-6 supports-[backdrop-filter]:backdrop-blur-sm transition-colors duration-300 sm:px-8 max-lg:pb-80 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain lg:supports-[backdrop-filter]:backdrop-blur-md",
   worldCard:
     "spread-inner spread-panel spread-panel-fade w-full max-w-md rounded-xl border p-3 transition-colors duration-300",
   worldLabel: "spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]",
-  title: "spread-title whitespace-nowrap text-xl font-semibold tracking-wide sm:text-2xl",
+  title: "spread-title whitespace-nowrap text-xl font-semibold tracking-[0.12em] sm:text-2xl",
   modalOverlay: "fixed inset-0 flex items-center justify-center bg-black/90 p-4",
   modalZHelp: "z-[60]",
   modalZCard: "z-[70]",
-  modalSheet: "spread-outer w-full max-w-md rounded-2xl border p-4",
-  modalSheetWide: "spread-outer w-full max-w-2xl rounded-2xl border p-4",
+  modalSheet: "spread-outer w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl border p-4",
+  modalSheetWide: "spread-outer w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border p-4",
   helpIcon: "spread-btn-ghost inline-flex h-5 w-5 items-center justify-center rounded-full p-0 text-[11px] leading-none",
   modalClose: "spread-btn-ghost rounded-full px-2 py-1 text-xs",
-  floatWrap: "fixed bottom-4 right-4 z-50 flex flex-wrap items-stretch justify-end gap-3 lg:hidden",
+  floatWrap: "hidden",
   floatNext:
     "spread-float-next min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold supports-[backdrop-filter]:backdrop-blur-sm transition disabled:cursor-not-allowed disabled:opacity-40",
   floatReset:
@@ -39,6 +39,8 @@ const spread = {
   resetBtn: "spread-btn-ghost min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium transition",
   modalHeader: "flex items-start justify-between gap-4"
 } as const;
+
+const LAYER_OPERATOR_LABELS = ["W", "S", "A", "F", "T", "G"] as const;
 
 type Card = {
   id: string;
@@ -124,7 +126,7 @@ const LAYERS: Layer[] = [
     meaning: "物語の種・根源的な意志・季節",
     drawCount: 1,
     pool: ACES,
-    triad: ["Will", "Intent", "Spark"]
+    triad: ["WILL", "Intent", "Spark"]
   },
   {
     key: "womb",
@@ -176,36 +178,43 @@ const REVEAL_ASSIAH_TO_ATZILUTH: number[] = [5, 4, 3, 2, 1, 0];
 const GLOBAL_LOGIC_EQUATION =
   "\\mathrm{Result} = \\mathcal{G} \\circ \\mathcal{T} \\circ \\mathcal{F} \\circ \\mathcal{A} \\circ \\mathcal{S}(W)";
 
-const LAYER_HELP: Record<Layer["key"], { title: string; body: string; formula?: string }> = {
+const LAYER_HELP: Record<Layer["key"], { title: string; body: string; cardLine?: string; formula?: string }> = {
   root: {
-    title: "Will — Intent — Spark",
-    body: "Atziluth / Kether.\nOne Ace card.\nA singularity that sets the primal polarity of the entire spread.",
+    title: "WILL — Intent — Spark",
+    body: "Interpretation: Sephirah 1 (Kether). The Ace defines root WILL and elemental direction.\nFunction: Use this as the baseline intention for the whole reading.\nQabalistic Anchor: Kether (1) is the undivided origin.\nFormula Rationale: $\\vec{V}_{seed}$ is singular because the spread begins from one seed.",
+    cardLine: "One Ace card.",
     formula: "\\vec{V}_{seed} = \\mathrm{Ace}_{element}"
   },
   womb: {
     title: "Stage — Domain — Matrix",
-    body: "Atziluth / Chokmah & Binah.\nTwo Princess cards.\nDefines the field and constraints as boundary conditions.\nForms the two pillars (Severity / Mercy).",
-    formula: "\\mathcal{S}(W) = \\{P_{left},\\,P_{right}\\}"
+    body: "Interpretation: Sephiroth 2-3 (Chokmah-Binah). Two Princesses set the stage through expansion and boundary.\nFunction: They shape how WILL (𝒲) can manifest in this reading.\nQabalistic Anchor: Chokmah (2) opens force; Binah (3) gives form.\nFormula Rationale: Two operators ($\\Psi_{P_{left}}$, $\\Psi_{P_{right}}$) act on one source to produce a workable field.",
+    cardLine: "Two Princess cards.",
+    formula: "\\vec{V}_{stage} = \\Psi_{P_{left}} \\cdot \\Psi_{P_{right}}(W)"
   },
   agents: {
     title: "Actors — Agents — Duality",
-    body: "Briah / Chesed & Geburah.\nTwo Court cards (Knight/Queen/Prince).\nInjects dynamic forces into the system.",
-    formula: "\\mathcal{A} = \\sum_{i=1}^{2}(\\mathrm{Court}_i \\times \\mathrm{Vector}_i)"
+    body: "Interpretation: Sephiroth 4-5 (Chesed-Geburah). Court cards represent active powers in tension.\nFunction: Read their balance as the current driving momentum of events.\nQabalistic Anchor: Chesed (4) expands and supports; Geburah (5) limits and corrects.\nFormula Rationale: $\\vec{F}_{net}$ is directional because outcome depends on opposing forces.",
+    cardLine: "Two Court cards (Knight / Queen / Prince).",
+    formula: "\\vec{F}_{net} = \\vec{F}_{\\mathrm{Chesed}(4)} \\oplus \\vec{F}_{\\mathrm{Geburah}(5)}"
   },
   destiny: {
     title: "Fate — Ordinance — Law",
-    body: "Briah / Tiphareth.\nOne zodiac-linked Major Arcana card.\nA fixed system protocol that governs the whole.",
-    formula: "\\mathcal{F} = \\mathrm{Const}(\\mathrm{Zodiac})"
+    body: "Interpretation: Sephirah 6 (Tiphareth). A Zodiac Major Arcana defines the core pattern of fate.\nFunction: It stabilizes and interprets dynamics coming from 𝒜 (Actors).\nQabalistic Anchor: Tiphareth (6) harmonizes upper cause and lower expression.\nFormula Rationale: $\\mathrm{Harmonize}(\\mathcal{A}_{4} \\oplus \\mathcal{A}_{5})$ is constrained by Zodiac as a fixed archetypal frame.",
+    cardLine: "One Zodiac Major Arcana card.",
+    formula: "\\Phi_{\\mathrm{Fate}} = \\mathrm{Harmonize}\\left(\\mathcal{A}_{4} \\oplus \\mathcal{A}_{5}\\right)\\big|_{\\mathrm{Zodiac}}"
   },
   events: {
     title: "Tales — Events — Sequences",
-    body: "Yetzirah / Netzach, Hod, Yesod.\nThree small cards.\nTime-series projection into concrete unfolding.",
-    formula: "\\mathcal{T} = \\{\\mathrm{Netzach},\\,\\mathrm{Hod},\\,\\mathrm{Yesod}\\}"
+    body: "Interpretation: Sephiroth 7-8-9 (Netzach-Hod-Yesod). Three small cards show unfolding sequence.\nFunction: Read them as motive (7), patterning (8), and synthesis (9).\nQabalistic Anchor: Netzach (7) fuels, Hod (8) structures, Yesod (9) consolidates.\nFormula Rationale: Flow moves to Yesod before manifestation in Malkuth.",
+    cardLine: "Three small cards.",
+    formula: "\\mathcal{T}(\\tau) = \\mathrm{Netzach}(7) \\oplus \\mathrm{Hod}(8) \\rightarrow \\mathrm{Yesod}(9)"
   },
   focus: {
     title: "Gaze — Vision — Perspective",
-    body: "Assiah / Malkuth.\nOne planet-linked Major Arcana card.\nFinal observation in the material plane.",
-    formula: "\\mathcal{G} = \\int \\mathcal{T}\\,dt \\rightarrow \\mathrm{Planet}"
+    body: "Interpretation: Sephirah 10 (Malkuth). The planetary Major Arcana shows the final observable phase.\nFunction: It integrates 𝒯 over time and resolves the reading into one practical lens.\nQabalistic Anchor: Malkuth (10) is the grounded endpoint of the Tree.\nFormula Rationale: Integral + collapse expresses accumulation followed by one concrete outcome.",
+    cardLine: "One Planetary Major Arcana card.",
+    formula:
+      "\\mathcal{G} = \\int_{t_0}^{t_{\\mathrm{final}}} \\mathcal{T}(t)\\,dt \\xrightarrow{\\mathrm{Collapse}} \\mathrm{Planet}"
   }
 };
 
@@ -386,6 +395,31 @@ const ELEMENT_SYMBOL: Record<string, string> = {
   Earth: "🜃"
 };
 
+const HEBREW_LETTER_META: Record<string, { name: string; keyword: string; value: number }> = {
+  א: { name: "Aleph", keyword: "Ox", value: 1 },
+  ב: { name: "Beth", keyword: "House", value: 2 },
+  ג: { name: "Gimel", keyword: "Camel", value: 3 },
+  ד: { name: "Daleth", keyword: "Door", value: 4 },
+  ה: { name: "Heh", keyword: "Window", value: 5 },
+  ו: { name: "Vav", keyword: "Nail", value: 6 },
+  ז: { name: "Zain", keyword: "Sword", value: 7 },
+  ח: { name: "Cheth", keyword: "Fence", value: 8 },
+  ט: { name: "Teth", keyword: "Serpent", value: 9 },
+  י: { name: "Yod", keyword: "Hand", value: 10 },
+  כ: { name: "Kaph", keyword: "Palm", value: 20 },
+  ל: { name: "Lamed", keyword: "Ox-Goad", value: 30 },
+  מ: { name: "Mem", keyword: "Water", value: 40 },
+  נ: { name: "Nun", keyword: "Fish", value: 50 },
+  ס: { name: "Samekh", keyword: "Prop", value: 60 },
+  ע: { name: "Ayin", keyword: "Eye", value: 70 },
+  פ: { name: "Peh", keyword: "Mouth", value: 80 },
+  צ: { name: "Tzaddi", keyword: "Fish Hook", value: 90 },
+  ק: { name: "Qoph", keyword: "Back of Head", value: 100 },
+  ר: { name: "Resh", keyword: "Head", value: 200 },
+  ש: { name: "Shin", keyword: "Tooth", value: 300 },
+  ת: { name: "Tav", keyword: "Cross", value: 400 }
+};
+
 function symbolizePlanetValue(value: string): string {
   return value
     .replace(/[☉☾☿♀♂♃♄♅♆♇]\s*/g, "")
@@ -448,6 +482,48 @@ function symbolizeSpan(decanRange: string, sign: string | null): string {
   return decanRange;
 }
 
+function formatHebrewLetterLine(value: string): string {
+  const glyphMatch = value.match(/[א-ת]/);
+  if (!glyphMatch) return value;
+  const glyph = glyphMatch[0];
+  const meta = HEBREW_LETTER_META[glyph];
+  if (!meta) return value;
+  return `${glyph} (${meta.name})\u00A0—\u00A0${meta.keyword} [${meta.value}]`;
+}
+
+function renderHelpBody(body: string) {
+  const renderInlineMath = (text: string) => {
+    const parts = text.split(/(\$[^$]+\$)/g).filter(Boolean);
+    return parts.map((part, i) => {
+      if (part.startsWith("$") && part.endsWith("$")) {
+        return <LatexInline key={`help-math-${i}`} tex={part.slice(1, -1)} />;
+      }
+      return <span key={`help-text-${i}`}>{part}</span>;
+    });
+  };
+
+  return body.split("\n").map((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return <div key={`help-gap-${idx}`} className="h-1" aria-hidden />;
+    }
+    const sectionMatch = trimmed.match(/^(Interpretation|Function|Qabalistic Anchor|Formula Rationale):\s*(.*)$/);
+    if (sectionMatch) {
+      return (
+        <p key={`help-line-${idx}`} className="leading-relaxed">
+          <strong className="spread-triad font-semibold">{sectionMatch[1]}:</strong>{" "}
+          <span>{renderInlineMath(sectionMatch[2])}</span>
+        </p>
+      );
+    }
+    return (
+      <p key={`help-line-${idx}`} className="leading-relaxed">
+        {renderInlineMath(line)}
+      </p>
+    );
+  });
+}
+
 export default function Page() {
   const [step, setStep] = useState(0);
   const [drawn, setDrawn] = useState<Record<string, Card[]>>({});
@@ -501,6 +577,7 @@ export default function Page() {
     );
 
   const completed = step === LAYERS.length;
+  const litOperatorIndexSet = useMemo(() => new Set(revealOrder.slice(0, step)), [revealOrder, step]);
   const nextStep = useCallback(() => {
     if (step >= LAYERS.length) return;
     const layerIndex = revealOrder[step];
@@ -523,6 +600,16 @@ export default function Page() {
     setDrawn({});
     setStep(0);
     rightPanelRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  const scrollToLayer = useCallback((layerIndex: number) => {
+    const layer = LAYERS[layerIndex];
+    const target = layerRefs.current[layer.key];
+    if (!target) return;
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
   }, []);
 
   useEffect(() => {
@@ -597,7 +684,7 @@ export default function Page() {
     <main data-theme={revealAtziluthToAssiah ? "descending" : "ascending"} className={spread.main}>
       <div className={spread.shell}>
         <section className={spread.rail}>
-          <h1 className={spread.title}>The Great Wheel Spread</h1>
+          <h1 className={spread.title}>ATHANOR</h1>
 
           <div className="mt-3">
             <div className="flex items-center gap-2">
@@ -605,12 +692,15 @@ export default function Page() {
               <HelpIconButton label="Global logic help" onClick={() => setIsGlobalHelpOpen(true)} />
             </div>
             <div className="mt-1.5 flex w-max max-w-full items-center gap-2">
-              <span
-                className={`shrink-0 text-xs ${
-                  !revealAtziluthToAssiah ? "spread-txt-strong" : "spread-txt-faint"
-                }`}
-              >
-                Ascending
+              <span className="flex shrink-0 flex-col leading-tight">
+                <span
+                  className={`text-xs ${
+                    !revealAtziluthToAssiah ? "spread-txt-strong" : "spread-txt-faint"
+                  }`}
+                >
+                  Ascending
+                </span>
+                <span className="spread-hint text-[10px] opacity-70">Analysis</span>
               </span>
               <button
                 type="button"
@@ -627,13 +717,40 @@ export default function Page() {
                   }`}
                 />
               </button>
-              <span
-                className={`shrink-0 text-xs ${
-                  revealAtziluthToAssiah ? "spread-txt-strong" : "spread-txt-faint"
-                }`}
-              >
-                Descending
+              <span className="flex shrink-0 flex-col leading-tight">
+                <span
+                  className={`text-xs ${
+                    revealAtziluthToAssiah ? "spread-txt-strong" : "spread-txt-faint"
+                  }`}
+                >
+                  Descending
+                </span>
+                <span className="spread-hint text-[10px] opacity-70">Projection</span>
               </span>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <p className="spread-hint text-[10px] tracking-[0.14em]">LAYER EXECUTION</p>
+            <div className="mt-1 flex items-center gap-1.5">
+              {LAYER_OPERATOR_LABELS.map((label, idx) => {
+                const isActive = litOperatorIndexSet.has(idx);
+                return (
+                  <button
+                    type="button"
+                    key={label}
+                    onClick={() => scrollToLayer(idx)}
+                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold transition ${
+                      isActive
+                        ? "spread-txt-strong ring-1 ring-indigo-300/70"
+                        : "spread-txt-faint ring-1 ring-white/15"
+                    }`}
+                    aria-label={`Scroll to layer ${label}${isActive ? " active" : ""}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -721,10 +838,13 @@ export default function Page() {
                 {activeLayer ? renderTriadWithOperator(activeLayer) : null}
               </h3>
               {activeLayer ? <p className="spread-hint mt-1 text-xs">{activeLayer.triad.slice(1).join(", ")}</p> : null}
+              {activeLayerHelp?.cardLine ? (
+                <p className="spread-hint mt-1 text-sm leading-relaxed">{activeLayerHelp.cardLine}</p>
+              ) : null}
             </div>
             <ModalCloseButton onClick={() => setActiveHelpKey(null)} />
           </div>
-          <p className="spread-hint mt-3 whitespace-pre-line text-sm leading-relaxed">{activeLayerHelp?.body}</p>
+          <div className="spread-hint mt-3 text-sm">{activeLayerHelp ? renderHelpBody(activeLayerHelp.body) : null}</div>
           {activeLayerHelp?.formula ? (
             <p className="mt-2 text-sm text-indigo-100/90">
               <LatexInline tex={activeLayerHelp.formula} />
@@ -746,7 +866,7 @@ export default function Page() {
           </div>
           <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
             <p>
-              <strong className="spread-triad font-semibold">Descending</strong> is the mode of unfoldment where will
+              <strong className="spread-triad font-semibold">Descending</strong> is the mode of unfoldment where WILL
               crystallizes into reality through the layered spread.
             </p>
             <p>
@@ -766,7 +886,7 @@ export default function Page() {
           </p>
           <div className="spread-hint mt-3 space-y-1 text-sm leading-relaxed">
             <p>
-              Layer 1: <LatexInline tex={"\\mathcal{W}"} /> (Will) - Primal vector
+              Layer 1: <LatexInline tex={"\\mathcal{W}"} /> (WILL) - Primal vector
             </p>
             <p>
               Layer 2: <LatexInline tex={"\\mathcal{S}"} /> (Stage) - Environmental filter
@@ -794,8 +914,7 @@ export default function Page() {
           maxWidth="wide"
           onClose={() => setSelectedCardId(null)}
         >
-          <div className={spread.modalHeader}>
-            <h3 className="spread-triad text-base font-semibold">{selectedCardModalTitle}</h3>
+          <div className="flex justify-end">
             <ModalCloseButton onClick={() => setSelectedCardId(null)} />
           </div>
           <div className="mt-3 grid gap-4 md:grid-cols-[auto_1fr]">
@@ -806,35 +925,47 @@ export default function Page() {
               decoding="async"
             />
             <div className="spread-hint text-sm leading-relaxed">
-              <p>
-                <strong className="spread-triad font-semibold">Stats</strong>
-              </p>
-              <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
-                {selectedCard.suit ? <p>Suit: {selectedCard.suit}</p> : null}
+              <h3 className="spread-triad text-base font-semibold">{selectedCardModalTitle}</h3>
+              <div className="mt-2 grid grid-cols-1 gap-x-5 gap-y-1.5 md:grid-cols-2">
+                {selectedCard.suit ? <p className="min-w-0 leading-snug">Suit: {selectedCard.suit}</p> : null}
                 {showRankInModal ? (
-                  <p>Rank: {selectedCard.arcanaTitle ? `${selectedCard.rank} (${selectedCard.arcanaTitle})` : selectedCard.rank}</p>
+                  <p className="min-w-0 leading-snug">
+                    Rank: {selectedCard.arcanaTitle ? `${selectedCard.rank} (${selectedCard.arcanaTitle})` : selectedCard.rank}
+                  </p>
                 ) : null}
-                {selectedCard.number ? <p>Number: {selectedCard.number}</p> : null}
-                {elementLine ? <p>Element: {elementLine}</p> : null}
-                {selectedCard.astrology.sign ? <p>Sign: {symbolizeSignValue(selectedCard.astrology.sign)}</p> : null}
+                {selectedCard.number ? <p className="min-w-0 leading-snug">Number: {selectedCard.number}</p> : null}
+                {elementLine ? <p className="min-w-0 leading-snug">Element: {elementLine}</p> : null}
+                {selectedCard.astrology.sign ? (
+                  <p className="min-w-0 leading-snug">Sign: {symbolizeSignValue(selectedCard.astrology.sign)}</p>
+                ) : null}
                 {isSelectedPlanetLayer && selectedCard.astrology.planet ? (
-                  <p>Planet: {symbolizePlanetValue(selectedCard.astrology.planet)}</p>
+                  <p className="min-w-0 leading-snug">Planet: {symbolizePlanetValue(selectedCard.astrology.planet)}</p>
                 ) : null}
-                {selectedCard.astrology.modality ? <p>Modality: {selectedCard.astrology.modality}</p> : null}
+                {selectedCard.astrology.modality ? (
+                  <p className="min-w-0 leading-snug">Modality: {selectedCard.astrology.modality}</p>
+                ) : null}
                 {!isSelectedPlanetLayer && selectedCard.astrology.planetRuler ? (
-                  <p>Planet Ruler: {symbolizePlanetValue(selectedCard.astrology.planetRuler)}</p>
+                  <p className="min-w-0 leading-snug">Planet Ruler: {symbolizePlanetValue(selectedCard.astrology.planetRuler)}</p>
                 ) : null}
                 {isSelectedPlanetLayer && selectedCard.astrology.governingSign ? (
-                  <p>Governing Sign: {symbolizeSignValue(selectedCard.astrology.governingSign)}</p>
+                  <p className="min-w-0 leading-snug">Governing Sign: {symbolizeSignValue(selectedCard.astrology.governingSign)}</p>
                 ) : null}
-                {selectedCard.dayOfWeek ? <p>Day: {selectedCard.dayOfWeek}</p> : null}
-                {selectedCard.metal ? <p>Metal: {selectedCard.metal}</p> : null}
-                {selectedCard.hebrewLetter ? <p>Hebrew Letter: {selectedCard.hebrewLetter}</p> : null}
-                {selectedCard.treeOfLifePath ? <p>Path: {selectedCard.treeOfLifePath}</p> : null}
+                {selectedCard.dayOfWeek ? <p className="min-w-0 leading-snug">Day: {selectedCard.dayOfWeek}</p> : null}
+                {selectedCard.metal ? <p className="min-w-0 leading-snug">Metal: {selectedCard.metal}</p> : null}
+                {selectedCard.hebrewLetter ? (
+                  <p className="min-w-0 leading-snug md:col-span-2">
+                    Hebrew Letter: {formatHebrewLetterLine(selectedCard.hebrewLetter)}
+                  </p>
+                ) : null}
+                {selectedCard.treeOfLifePath ? (
+                  <p className="min-w-0 leading-snug md:col-span-2">Path: {selectedCard.treeOfLifePath}</p>
+                ) : null}
                 {selectedCard.astrology.decanRange ? (
-                  <p>Span: {symbolizeSpan(selectedCard.astrology.decanRange, selectedCard.astrology.sign)}</p>
+                  <p className="min-w-0 leading-snug">
+                    Span: {symbolizeSpan(selectedCard.astrology.decanRange, selectedCard.astrology.sign)}
+                  </p>
                 ) : null}
-                {selectedCard.astrology.dates ? <p>Dates: {selectedCard.astrology.dates}</p> : null}
+                {selectedCard.astrology.dates ? <p className="min-w-0 leading-snug">Dates: {selectedCard.astrology.dates}</p> : null}
               </div>
             </div>
           </div>
