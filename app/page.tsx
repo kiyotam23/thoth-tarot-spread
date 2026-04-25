@@ -21,7 +21,8 @@ const spread = {
   worldCard:
     "spread-inner spread-panel spread-panel-fade w-full max-w-md rounded-xl border p-3 transition-colors duration-300",
   worldLabel: "spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]",
-  title: "spread-title whitespace-nowrap text-xl font-semibold tracking-[0.12em] sm:text-2xl",
+  title: "spread-title whitespace-nowrap font-mono text-xl font-bold tracking-[0.18em] sm:text-2xl",
+  brandCredit: "spread-hint mt-3 text-left font-mono text-[10px] tracking-[0.1em] opacity-80",
   modalOverlay: "fixed inset-0 flex items-center justify-center bg-black/90 p-4",
   modalZHelp: "z-[60]",
   modalZCard: "z-[70]",
@@ -762,6 +763,7 @@ export default function Page() {
               Reset
             </button>
           </div>
+          <p className={spread.brandCredit}>System authored by Beeton</p>
         </section>
         <section ref={rightPanelRef} className={spread.canvas}>
           <div className="flex flex-col items-center gap-4">
