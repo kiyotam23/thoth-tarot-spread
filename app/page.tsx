@@ -22,7 +22,9 @@ const spread = {
     "spread-inner spread-panel spread-panel-fade w-full max-w-md rounded-xl border p-3 transition-colors duration-300",
   worldLabel: "spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]",
   title: "spread-title whitespace-nowrap font-mono text-xl font-bold tracking-[0.18em] sm:text-2xl",
-  brandCredit: "spread-hint mt-3 text-left font-mono text-[10px] tracking-[0.1em] opacity-80",
+  brandCredit: "spread-hint mt-3 text-left font-mono text-[10px] font-thin tracking-widest opacity-80",
+  brandCopyright:
+    "pointer-events-none select-none text-right font-mono text-[8px] font-thin leading-none tracking-widest opacity-50",
   modalOverlay: "fixed inset-0 flex items-center justify-center bg-black/90 p-4",
   modalZHelp: "z-[60]",
   modalZCard: "z-[70]",
@@ -741,14 +743,16 @@ export default function Page() {
                     type="button"
                     key={label}
                     onClick={() => scrollToLayer(idx)}
-                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold transition ${
+                    className={`flex h-5 w-5 items-center justify-center rounded-full transition ${
                       isActive
                         ? "spread-txt-strong ring-1 ring-indigo-300/70"
                         : "spread-txt-faint ring-1 ring-white/15"
                     }`}
                     aria-label={`Scroll to layer ${label}${isActive ? " active" : ""}`}
                   >
-                    {label}
+                    <span className="spread-layer-op-char" aria-hidden>
+                      {label}
+                    </span>
                   </button>
                 );
               })}
@@ -817,6 +821,12 @@ export default function Page() {
           </div>
         </section>
       </div>
+
+      <footer className="mx-auto w-full max-w-7xl shrink-0 py-1">
+        <p className={spread.brandCopyright} aria-label="Copyright">
+          © 2026 Beeton
+        </p>
+      </footer>
 
       <div className={spread.floatWrap}>
         <button type="button" onClick={nextStep} disabled={completed} className={spread.floatNext}>
