@@ -3,6 +3,7 @@
 import katex from "katex";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CARD_INDEX } from "../constants/cards";
+import { TreeOfLifeBackground } from "./TreeOfLifeBackground";
 
 const KATEX_OPTS = { throwOnError: false } as const;
 
@@ -37,9 +38,11 @@ const spread = {
   floatReset:
     "spread-float-reset min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold supports-[backdrop-filter]:backdrop-blur-sm transition",
   controlGrid: "mt-3 grid w-full grid-cols-2 gap-2",
-  modePillRow: "mt-1.5 flex w-full min-w-0 flex-col gap-1 sm:flex-row",
-  railBottom: "mt-auto w-full space-y-2 pt-4",
-  layerExecutionInRail: "w-full text-left",
+  modePillRow: "mt-1.5 flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:gap-3",
+  layerExecutionFixed:
+    "pointer-events-auto fixed right-3 top-3 z-30 w-auto min-w-0 text-right sm:right-5 sm:top-5",
+  sephiroticPanel:
+    "pointer-events-auto fixed right-3 top-3 z-30 w-auto min-w-0 max-w-[min(96vw,24rem)] text-right sm:right-5 sm:top-5",
   drawBtn: "spread-btn-go min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium backdrop-blur transition disabled:cursor-not-allowed disabled:opacity-40",
   resetBtn: "spread-btn-ghost min-w-0 max-w-full rounded-full px-2 py-2 text-center text-xs font-medium transition",
   modalHeader: "flex items-start justify-between gap-4"
@@ -174,6 +177,50 @@ const LAYERS: Layer[] = [
     triad: ["Gaze", "Vision", "Perspective"]
   }
 ];
+
+/**
+ * Map each **physical card slot** (left-to-right, then bottom row) to a Sephirah 1–10, matching
+ * a standard Tree of Life view: viewer-left = Pillar of Severity (3,5,8), viewer-right = Pillar
+ * of Mercy (2,4,7), center column (1,6,9,10). Pairs in `spread-card-row` are [left, right];
+ * Yetzirah is a 2+1 grid: top [Hod, Netzach], bottom [Yesod].
+ */
+function sephirahForLayerSlot(layerIndex: number, cardIndexInLayer: number): number {
+  if (layerIndex === 0) return 1;
+  // Womb: left Binah (3), right Chokmah (2)
+  if (layerIndex === 1) return cardIndexInLayer === 0 ? 3 : 2;
+  // Agents: left Geburah (5), right Chesed (4)
+  if (layerIndex === 2) return cardIndexInLayer === 0 ? 5 : 4;
+  if (layerIndex === 3) return 6;
+  // Events: top-left Hod (8), top-right Netzach (7), bottom Yesod (9) — see grid in page layout
+  if (layerIndex === 4) {
+    if (cardIndexInLayer === 0) return 8;
+    if (cardIndexInLayer === 1) return 7;
+    return 9;
+  }
+  if (layerIndex === 5) return 10;
+  return 0;
+}
+
+function sephirahForSlotKey(slotKey: string): number {
+  const parts = slotKey.split("__");
+  if (parts.length < 2) return 0;
+  const layerKey = parts[0];
+  const idxStr = parts[parts.length - 1];
+  const layerIndex = LAYERS.findIndex((l) => l.key === layerKey);
+  const cardIndex = parseInt(idxStr, 10);
+  if (layerIndex < 0 || Number.isNaN(cardIndex)) return 0;
+  return sephirahForLayerSlot(layerIndex, cardIndex);
+}
+
+function layerIndexForSephirah(n: number): number {
+  if (n === 1) return 0;
+  if (n === 2 || n === 3) return 1;
+  if (n === 4 || n === 5) return 2;
+  if (n === 6) return 3;
+  if (n >= 7 && n <= 9) return 4;
+  if (n === 10) return 5;
+  return 0;
+}
 
 /** L1 (top, Atziluth) → L6 (bottom, Assiah) — emantion downward on screen */
 const REVEAL_ATZILUTH_TO_ASSIAH: number[] = [0, 1, 2, 3, 4, 5];
@@ -318,7 +365,13 @@ function dealAllLayers(): Record<string, Card[]> {
 
 type RevealMode = "ascending" | "descending" | "freestyle";
 
-type FreestyleLogEntry = { slotKey: string; cardId: string; name: string; op: (typeof LAYER_OPERATOR_LABELS)[number] };
+type FreestyleLogEntry = {
+  slotKey: string;
+  cardId: string;
+  name: string;
+  op: (typeof LAYER_OPERATOR_LABELS)[number];
+  sephirah: number;
+};
 
 function preloadImageUrls(urls: string[]) {
   for (const src of urls) {
@@ -552,6 +605,7 @@ export default function Page() {
   const [freestyleOrderLog, setFreestyleOrderLog] = useState<FreestyleLogEntry[]>([]);
   const [activeHelpKey, setActiveHelpKey] = useState<Layer["key"] | null>(null);
   const [isGlobalHelpOpen, setIsGlobalHelpOpen] = useState(false);
+  const [showTreeOfLife, setShowTreeOfLife] = useState(true);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const rightPanelRef = useRef<HTMLDivElement | null>(null);
@@ -621,12 +675,6 @@ export default function Page() {
     setFreestyleFaceUp({});
     setFreestyleOrderLog([]);
     setStep(0);
-  }, []);
-
-  /** Same deal; all face down again, log cleared. */
-  const reScatterFreestyle = useCallback(() => {
-    setFreestyleFaceUp({});
-    setFreestyleOrderLog([]);
     setSelectedCardId(null);
   }, []);
 
@@ -665,7 +713,7 @@ export default function Page() {
 
   const reset = useCallback(() => {
     if (revealMode === "freestyle") {
-      reScatterFreestyle();
+      dealFreestyle();
     } else {
       setDrawn({});
       setStep(0);
@@ -673,7 +721,7 @@ export default function Page() {
     setSelectedCardId(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
     rightPanelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-  }, [revealMode, reScatterFreestyle]);
+  }, [revealMode, dealFreestyle]);
 
   const revealFreestyleSlot = useCallback((slotKey: string, card: Card, op: (typeof LAYER_OPERATOR_LABELS)[number]) => {
     setFreestyleFaceUp((prev) => {
@@ -682,7 +730,7 @@ export default function Page() {
     });
     setFreestyleOrderLog((prev) => {
       if (prev.some((e) => e.slotKey === slotKey)) return prev;
-      return [...prev, { slotKey, cardId: card.id, name: card.name, op }];
+      return [...prev, { slotKey, cardId: card.id, name: card.name, op, sephirah: sephirahForSlotKey(slotKey) }];
     });
     preloadImageUrls([card.image]);
   }, []);
@@ -762,6 +810,8 @@ export default function Page() {
         }
 
         const opened = (drawn[layer.key]?.length ?? 0) > 0;
+        const nextLayerIndex = step < LAYERS.length ? revealOrder[step] : -1;
+        const isNextLayer = layerIdx === nextLayerIndex;
 
         if (opened) {
           const cards = drawn[layer.key] ?? [];
@@ -776,24 +826,49 @@ export default function Page() {
           ));
         }
 
-        return Array.from({ length: layer.drawCount }, (_, placeholderIdx) => (
-          <div
-            key={`${layer.key}-placeholder-${placeholderIdx}`}
-            aria-label="card back"
-            className="spread-tile-back spread-card-back-shell border border-dashed"
-          >
-            <img
-              src={cardBackImage}
-              alt=""
-              className="spread-card-back-img"
-              loading="lazy"
-              decoding="async"
-            />
-            <span className="sr-only">Card Back</span>
-          </div>
-        ));
+        return Array.from({ length: layer.drawCount }, (_, placeholderIdx) => {
+          const placeholderKey = `${layer.key}-placeholder-${placeholderIdx}`;
+          if (isNextLayer) {
+            return (
+              <div key={placeholderKey} className="spread-tile-back spread-card-back-shell border border-dashed">
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  aria-label={`Draw — same as control (${step + 1}/6, ${op})`}
+                  className="block h-full w-full min-h-0 overflow-hidden rounded-lg border-0 bg-transparent p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
+                >
+                  <img
+                    src={cardBackImage}
+                    alt=""
+                    className="spread-card-back-img"
+                    loading="eager"
+                    decoding="async"
+                    draggable={false}
+                  />
+                  <span className="sr-only">Card back — tap to draw this layer</span>
+                </button>
+              </div>
+            );
+          }
+          return (
+            <div
+              key={placeholderKey}
+              aria-label="card back (locked until previous draws)"
+              className="spread-tile-back spread-card-back-shell border border-dashed"
+            >
+              <img
+                src={cardBackImage}
+                alt=""
+                className="spread-card-back-img"
+                loading="lazy"
+                decoding="async"
+              />
+              <span className="sr-only">Card back</span>
+            </div>
+          );
+        });
       }),
-    [drawn, cardBackImage, revealMode, freestyleFaceUp, revealFreestyleSlot]
+    [drawn, cardBackImage, revealMode, freestyleFaceUp, revealFreestyleSlot, nextStep, step, revealOrder]
   );
   const yetzirahCards = cardsByLayer[4] ?? [];
 
@@ -809,61 +884,127 @@ export default function Page() {
 
   return (
     <main data-theme={revealMode} className={spread.main}>
+      {revealMode === "freestyle" ? (
+        <div
+          className={`${spread.sephiroticPanel} rounded-lg border border-white/5 bg-black/30 px-2 py-1.5 shadow-lg backdrop-blur-md sm:px-2.5 sm:py-1.5`}
+          aria-label="The Sephirotic Trajectory"
+        >
+          <p className="text-left text-[8px] font-medium leading-snug tracking-[0.2em] text-slate-100/95 sm:text-[10px] sm:leading-tight sm:tracking-[0.16em]">
+            THE SEPHIROTIC TRAJECTORY
+          </p>
+          <div className="mt-1 flex w-full min-w-0 max-w-full flex-wrap items-center justify-start gap-1.5 text-left" role="list">
+            {Array.from({ length: TOTAL_SPREAD_CARDS }, (_, i) => {
+              const entry = freestyleOrderLog[i];
+              if (entry) {
+                const n = entry.sephirah;
+                return (
+                  <button
+                    type="button"
+                    key={entry.slotKey}
+                    role="listitem"
+                    onClick={() => scrollToLayer(layerIndexForSephirah(n))}
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[9px] transition sm:h-5 sm:w-5 sm:text-[10px] spread-txt-strong ring-1 ring-indigo-200/80 ${
+                      n === 10 ? "text-[8px] sm:text-[9px]" : ""
+                    }`}
+                    title={`Sephirah ${n}`}
+                    aria-label={`Reveal ${i + 1}, Sephirah ${n} — scroll to that sphere on the Tree`}
+                  >
+                    <span className="font-mono tabular-nums" aria-hidden>
+                      {n}
+                    </span>
+                  </button>
+                );
+              }
+              return (
+                <span
+                  key={`trajectory-pending-${i}`}
+                  role="listitem"
+                  aria-label={`Trajectory step ${i + 1} of ${TOTAL_SPREAD_CARDS} — not yet taken`}
+                  className="box-border flex h-6 w-6 shrink-0 items-center justify-center rounded-full spread-txt-faint ring-1 ring-white/20 sm:h-5 sm:w-5"
+                />
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`${spread.layerExecutionFixed} rounded-lg border border-white/5 bg-black/30 px-2 py-1.5 shadow-lg backdrop-blur-md sm:px-2.5 sm:py-1.5`}
+          aria-label="Layer execution"
+        >
+          <p className="text-[10px] font-medium tracking-[0.16em] text-slate-100/95 sm:text-[11px]">LAYER EXECUTION</p>
+          <div className="mt-1 flex items-center justify-end gap-1.5">
+            {LAYER_OPERATOR_LABELS.map((label, idx) => {
+              const isActive = litOperatorIndexSet.has(idx);
+              return (
+                <button
+                  type="button"
+                  key={label}
+                  onClick={() => scrollToLayer(idx)}
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] transition sm:h-5 sm:w-5 ${
+                    isActive
+                      ? "spread-txt-strong ring-1 ring-indigo-200/80"
+                      : "spread-txt-faint ring-1 ring-white/20"
+                  }`}
+                  aria-label={`Scroll to layer ${label}${isActive ? " active" : ""}`}
+                >
+                  <span className="spread-layer-op-char" aria-hidden>
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className={spread.shell}>
-        <section className={`${spread.rail} flex min-h-0 flex-col`}>
+        <section className={spread.rail}>
           <h1 className={spread.title}>ATHANOR</h1>
 
           <div className="mt-3">
-            <div className="flex items-center gap-2">
-              <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
-              <HelpIconButton label="Global logic help" onClick={() => setIsGlobalHelpOpen(true)} />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
+                <HelpIconButton label="Global logic help" onClick={() => setIsGlobalHelpOpen(true)} />
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={showTreeOfLife}
+                aria-label={showTreeOfLife ? "生命樹の背景をオフにする" : "生命樹の背景をオンにする"}
+                onClick={() => setShowTreeOfLife((v) => !v)}
+                className="spread-btn-ghost shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium sm:text-xs"
+              >
+                {showTreeOfLife ? "Tree · on" : "Tree · off"}
+              </button>
             </div>
             <div className={spread.modePillRow} role="group" aria-label="Reveal order mode">
               <button
                 type="button"
                 onClick={() => selectRevealMode("ascending")}
-                className={`spread-mode-pill min-h-[2.5rem] ${revealMode === "ascending" ? "is-active" : ""}`}
+                className={`spread-mode-pill min-h-10 ${revealMode === "ascending" ? "is-active" : ""}`}
               >
-                <span
-                  className={revealMode === "ascending" ? "spread-txt-strong" : "spread-txt-faint"}
-                >
-                  Ascending
-                </span>
-                <span className="spread-hint">Analysis</span>
+                <span className={revealMode === "ascending" ? "spread-txt-strong" : "spread-txt-faint"}>Ascending</span>
               </button>
               <button
                 type="button"
                 onClick={() => selectRevealMode("descending")}
-                className={`spread-mode-pill min-h-[2.5rem] ${revealMode === "descending" ? "is-active" : ""}`}
+                className={`spread-mode-pill min-h-10 ${revealMode === "descending" ? "is-active" : ""}`}
               >
-                <span
-                  className={revealMode === "descending" ? "spread-txt-strong" : "spread-txt-faint"}
-                >
-                  Descending
-                </span>
-                <span className="spread-hint">Projection</span>
+                <span className={revealMode === "descending" ? "spread-txt-strong" : "spread-txt-faint"}>Descending</span>
               </button>
               <button
                 type="button"
                 onClick={() => selectRevealMode("freestyle")}
-                className={`spread-mode-pill min-h-[2.5rem] ${revealMode === "freestyle" ? "is-active" : ""}`}
+                className={`spread-mode-pill min-h-10 ${revealMode === "freestyle" ? "is-active" : ""}`}
               >
-                <span
-                  className={revealMode === "freestyle" ? "spread-txt-strong" : "spread-txt-faint"}
-                >
-                  Freestyle
-                </span>
-                <span className="spread-hint">Tree · any order</span>
+                <span className={revealMode === "freestyle" ? "spread-txt-strong" : "spread-txt-faint"}>Free</span>
               </button>
             </div>
           </div>
 
           {revealMode === "freestyle" ? (
-            <div className={spread.controlGrid}>
-              <button type="button" onClick={dealFreestyle} className={spread.drawBtn}>
-                Re-deal
-              </button>
-              <button type="button" onClick={reset} className={spread.resetBtn}>
+            <div className="mt-3 w-full">
+              <button type="button" onClick={dealFreestyle} className={`${spread.drawBtn} w-full`}>
                 Reset
               </button>
             </div>
@@ -877,38 +1018,14 @@ export default function Page() {
               </button>
             </div>
           )}
-          {revealMode !== "freestyle" ? (
-            <div className={spread.railBottom}>
-              <div className={spread.layerExecutionInRail} aria-label="Layer execution">
-                <p className="spread-hint text-[10px] tracking-[0.14em]">LAYER EXECUTION</p>
-                <div className="mt-1 flex items-center justify-start gap-1.5">
-                  {LAYER_OPERATOR_LABELS.map((label, idx) => {
-                    const isActive = litOperatorIndexSet.has(idx);
-                    return (
-                      <button
-                        type="button"
-                        key={label}
-                        onClick={() => scrollToLayer(idx)}
-                        className={`flex h-5 w-5 items-center justify-center rounded-full transition ${
-                          isActive
-                            ? "spread-txt-strong ring-1 ring-indigo-300/70"
-                            : "spread-txt-faint ring-1 ring-white/15"
-                        }`}
-                        aria-label={`Scroll to layer ${label}${isActive ? " active" : ""}`}
-                      >
-                        <span className="spread-layer-op-char" aria-hidden>
-                          {label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+        </section>
+        <section ref={rightPanelRef} className={`${spread.canvas} relative`}>
+          {showTreeOfLife ? (
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-[0.4] sm:opacity-50">
+              <TreeOfLifeBackground />
             </div>
           ) : null}
-        </section>
-        <section ref={rightPanelRef} className={spread.canvas}>
-          <div className="flex flex-col items-center gap-4">
+          <div className="relative z-[1] flex flex-col items-center gap-4">
             <div className={spread.worldCard}>
               <p className={spread.worldLabel}>Atziluth</p>
               <div className="flex flex-col items-center">
@@ -1024,7 +1141,7 @@ export default function Page() {
               narrative is integrated back toward essence.
             </p>
             <p>
-              <strong className="spread-triad font-semibold">Freestyle</strong> keeps the same Tree of sephiroth
+              <strong className="spread-triad font-semibold">Free</strong> keeps the same Tree of sephiroth
               layout, but the full spread is dealt at once, face down. You choose which layer to turn next.
             </p>
           </div>

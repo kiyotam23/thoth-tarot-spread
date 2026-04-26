@@ -79,9 +79,6 @@ img.spread-card-modal-art {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
 }
-.spread-mode-pill .spread-hint {
-  @apply block text-[9px] opacity-80 sm:text-[10px];
-}
 main[data-theme="descending"] .spread-mode-pill.is-active,
 main[data-theme="ascending"] .spread-mode-pill.is-active,
 main[data-theme="freestyle"] .spread-mode-pill.is-active {
