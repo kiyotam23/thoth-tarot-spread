@@ -74,6 +74,29 @@ img.spread-card-modal-art {
   line-height: 1;
 }
 
+.spread-mode-pill {
+  @apply min-w-0 flex-1 rounded-lg px-1.5 py-1.5 text-center text-[10px] font-medium leading-tight transition sm:px-2 sm:text-xs;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+.spread-mode-pill .spread-hint {
+  @apply block text-[9px] opacity-80 sm:text-[10px];
+}
+main[data-theme="descending"] .spread-mode-pill.is-active,
+main[data-theme="ascending"] .spread-mode-pill.is-active,
+main[data-theme="freestyle"] .spread-mode-pill.is-active {
+  box-shadow: 0 0 0 1px rgba(199, 210, 254, 0.45);
+  background: rgba(99, 102, 241, 0.22);
+}
+main[data-theme="ascending"] .spread-mode-pill.is-active {
+  box-shadow: 0 0 0 1px rgba(255, 160, 175, 0.45);
+  background: rgba(180, 50, 80, 0.3);
+}
+main[data-theme="freestyle"] .spread-mode-pill.is-active {
+  box-shadow: 0 0 0 1px rgba(100, 200, 170, 0.45);
+  background: rgba(30, 120, 90, 0.35);
+}
+
 .spread-panel-fade {
   animation: panelFadeIn 220ms ease-out both;
 }
@@ -107,8 +130,18 @@ main[data-theme="ascending"] {
   background: radial-gradient(circle at 18% 8%, #4a1c28 0%, #1e0a10 45%, #0a0305 100%);
 }
 
+/* Freestyle (scatter, open in any order): jade / deep smoke */
+main[data-theme="freestyle"] {
+  min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+  color: #e4f0ec;
+  background: radial-gradient(circle at 22% 10%, #1a2e2a 0%, #0a120f 50%, #030806 100%);
+}
+
 main[data-theme="descending"]::before,
-main[data-theme="ascending"]::before {
+main[data-theme="ascending"]::before,
+main[data-theme="freestyle"]::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -126,8 +159,15 @@ main[data-theme="ascending"]::before {
     linear-gradient(to bottom, rgba(255, 180, 195, 0.05) 1px, transparent 1px);
 }
 
+main[data-theme="freestyle"]::before {
+  background-image:
+    linear-gradient(to right, rgba(160, 220, 200, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(160, 220, 200, 0.055) 1px, transparent 1px);
+}
+
 main[data-theme="descending"] > :not(.fixed),
-main[data-theme="ascending"] > :not(.fixed) {
+main[data-theme="ascending"] > :not(.fixed),
+main[data-theme="freestyle"] > :not(.fixed) {
   position: relative;
   z-index: 1;
 }
@@ -148,6 +188,14 @@ main[data-theme="ascending"] .spread-outer {
     0 10px 32px rgba(60, 15, 30, 0.45);
 }
 
+main[data-theme="freestyle"] .spread-outer {
+  border-color: rgba(150, 210, 190, 0.18);
+  background: rgba(6, 24, 18, 0.42);
+  box-shadow:
+    0 0 0 1px rgba(120, 200, 170, 0.1),
+    0 10px 32px rgba(0, 40, 32, 0.35);
+}
+
 main[data-theme="descending"] .spread-inner {
   border-color: rgba(165, 180, 252, 0.22);
   background: rgba(2, 6, 23, 0.35);
@@ -158,6 +206,11 @@ main[data-theme="ascending"] .spread-inner {
   background: rgba(20, 6, 10, 0.45);
 }
 
+main[data-theme="freestyle"] .spread-inner {
+  border-color: rgba(100, 180, 150, 0.28);
+  background: rgba(4, 18, 14, 0.44);
+}
+
 main[data-theme="descending"] .spread-title {
   color: #e0e7ff;
 }
@@ -166,12 +219,20 @@ main[data-theme="ascending"] .spread-title {
   color: #fce8ee;
 }
 
+main[data-theme="freestyle"] .spread-title {
+  color: #d4f0e6;
+}
+
 main[data-theme="descending"] .spread-hint {
   color: rgba(224, 232, 255, 0.92);
 }
 
 main[data-theme="ascending"] .spread-hint {
   color: rgba(255, 222, 230, 0.92);
+}
+
+main[data-theme="freestyle"] .spread-hint {
+  color: rgba(200, 235, 220, 0.9);
 }
 
 main[data-theme="descending"] .spread-txt-strong {
@@ -184,12 +245,21 @@ main[data-theme="ascending"] .spread-txt-strong {
   font-weight: 600;
 }
 
+main[data-theme="freestyle"] .spread-txt-strong {
+  color: #b8f0d8;
+  font-weight: 600;
+}
+
 main[data-theme="descending"] .spread-txt-faint {
   color: rgba(199, 210, 254, 0.45);
 }
 
 main[data-theme="ascending"] .spread-txt-faint {
   color: rgba(255, 180, 195, 0.45);
+}
+
+main[data-theme="freestyle"] .spread-txt-faint {
+  color: rgba(150, 200, 180, 0.42);
 }
 
 main[data-theme="descending"] .spread-world-label {
@@ -200,12 +270,20 @@ main[data-theme="ascending"] .spread-world-label {
   color: rgba(255, 190, 200, 0.82);
 }
 
+main[data-theme="freestyle"] .spread-world-label {
+  color: rgba(180, 220, 200, 0.82);
+}
+
 main[data-theme="descending"] .spread-triad {
   color: rgba(236, 241, 255, 0.98);
 }
 
 main[data-theme="ascending"] .spread-triad {
   color: rgba(255, 230, 236, 0.98);
+}
+
+main[data-theme="freestyle"] .spread-triad {
+  color: rgba(220, 245, 234, 0.98);
 }
 
 main[data-theme="descending"] .spread-toggle {
@@ -252,6 +330,15 @@ main[data-theme="ascending"] .spread-btn-go:hover:not(:disabled) {
   background: rgba(200, 70, 100, 0.35);
 }
 
+main[data-theme="freestyle"] .spread-btn-go {
+  color: #e4f8ef;
+  background: rgba(40, 140, 110, 0.28);
+  box-shadow: 0 0 0 1px rgba(120, 200, 170, 0.3);
+}
+main[data-theme="freestyle"] .spread-btn-go:hover:not(:disabled) {
+  background: rgba(50, 160, 125, 0.36);
+}
+
 main[data-theme="descending"] .spread-btn-ghost {
   color: #e2e8f0;
   background: rgba(255, 255, 255, 0.05);
@@ -270,6 +357,15 @@ main[data-theme="ascending"] .spread-btn-ghost:hover {
   background: rgba(60, 20, 30, 0.65);
 }
 
+main[data-theme="freestyle"] .spread-btn-ghost {
+  color: #d8eee4;
+  background: rgba(8, 32, 24, 0.55);
+  box-shadow: 0 0 0 1px rgba(100, 180, 150, 0.22);
+}
+main[data-theme="freestyle"] .spread-btn-ghost:hover {
+  background: rgba(12, 45, 34, 0.68);
+}
+
 main[data-theme="descending"] .spread-tile {
   border-color: rgba(255, 255, 255, 0.14);
   background: rgba(2, 6, 23, 0.45);
@@ -281,6 +377,12 @@ main[data-theme="ascending"] .spread-tile {
   box-shadow: 0 0 0 1px rgba(200, 80, 100, 0.1);
 }
 
+main[data-theme="freestyle"] .spread-tile {
+  border-color: rgba(120, 200, 170, 0.22);
+  background: rgba(3, 18, 12, 0.55);
+  box-shadow: 0 0 0 1px rgba(60, 140, 110, 0.12);
+}
+
 main[data-theme="descending"] .spread-tile-back {
   border-color: rgba(165, 180, 252, 0.28);
   background-color: rgba(2, 6, 23, 0.35);
@@ -288,6 +390,11 @@ main[data-theme="descending"] .spread-tile-back {
 main[data-theme="ascending"] .spread-tile-back {
   border-color: rgba(200, 90, 110, 0.35);
   background-color: rgba(25, 8, 12, 0.45);
+}
+
+main[data-theme="freestyle"] .spread-tile-back {
+  border-color: rgba(100, 180, 150, 0.32);
+  background-color: rgba(4, 20, 14, 0.48);
 }
 
 main[data-theme="descending"] .spread-float-next {
