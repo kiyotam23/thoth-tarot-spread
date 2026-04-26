@@ -1,9 +1,10 @@
 "use client";
 
 import katex from "katex";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CARD_INDEX } from "../constants/cards";
-import { TreeOfLifeBackground } from "./TreeOfLifeBackground";
+import type { ThothPath } from "../constants/thothPaths";
+import { TreeOfLifeLines, TreePathHitLayer, type TreeLayout } from "./TreeOfLifeBackground";
 
 const KATEX_OPTS = { throwOnError: false } as const;
 
@@ -18,10 +19,11 @@ const spread = {
   rail:
     "spread-outer w-full shrink-0 rounded-2xl border p-5 supports-[backdrop-filter]:backdrop-blur-sm transition-colors duration-300 max-lg:fixed max-lg:bottom-3 max-lg:inset-x-3 max-lg:w-auto max-lg:z-40 lg:w-[20rem] lg:max-w-[20rem] lg:supports-[backdrop-filter]:backdrop-blur-md",
   canvas:
-    "spread-outer w-full min-w-0 overflow-x-hidden rounded-2xl border px-4 py-6 supports-[backdrop-filter]:backdrop-blur-sm transition-colors duration-300 sm:px-8 max-lg:pb-80 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain lg:supports-[backdrop-filter]:backdrop-blur-md",
+    "spread-outer spread-canvas-panel w-full min-w-0 overflow-x-hidden rounded-2xl border px-5 py-7 transition-colors duration-300 sm:px-9 sm:py-8 max-lg:pb-80 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain supports-[backdrop-filter]:backdrop-blur-sm lg:supports-[backdrop-filter]:backdrop-blur-md",
   worldCard:
-    "spread-inner spread-panel spread-panel-fade w-full max-w-md rounded-xl border p-3 transition-colors duration-300",
-  worldLabel: "spread-world-label mb-3 text-center text-xs font-medium tracking-[0.12em]",
+    "spread-inner spread-panel spread-panel-fade w-full max-w-xl rounded-xl border p-4 transition-colors duration-300 sm:p-5",
+  worldLabel:
+    "spread-world-label relative z-[3] mb-4 w-full pointer-events-none text-left text-xs font-medium tracking-[0.12em] pl-0.5",
   title: "spread-title whitespace-nowrap font-mono text-xl font-bold tracking-[0.18em] sm:text-2xl",
   brandCopyright:
     "pointer-events-none max-w-2xl select-none text-right text-[8px] font-mono font-thin leading-relaxed tracking-wide opacity-50 sm:ml-auto sm:text-[9px]",
@@ -229,6 +231,16 @@ const REVEAL_ASSIAH_TO_ATZILUTH: number[] = [5, 4, 3, 2, 1, 0];
 
 const GLOBAL_LOGIC_EQUATION =
   "\\mathrm{Result} = \\mathcal{G} \\circ \\mathcal{T} \\circ \\mathcal{F} \\circ \\mathcal{A} \\circ \\mathcal{S}(W)";
+
+const OVERLAY_HELP_INTRO =
+  'Visualizes the 22 paths of the Tree of Life as the system\u2019s "internal wiring." It maps the spread to the 22 links between the ten Sephiroth.';
+
+const OVERLAY_HELP_SECTIONS = [
+  "Interpretation: Displays the fixed major arcana for each route. These are the specific protocols through which energy travels between Sephiroth.",
+  "Function: Read the connections between cards to understand the dynamic transmission of the event—how one layer's outcome influences the next.",
+  "Qabalistic Anchor: The 22 paths are the \"Vectors of Influence.\" They define the quality of the link between the 10 Sephiroth.",
+  "Protocol: A path is not merely a line between two points. It is the contract that governs how adjacent cards communicate: the major arcana on that edge names the mediating link."
+].join("\n");
 
 const LAYER_HELP: Record<Layer["key"], { title: string; body: string; cardLine?: string; formula?: string }> = {
   root: {
@@ -579,7 +591,9 @@ function renderHelpBody(body: string) {
     if (!trimmed) {
       return <div key={`help-gap-${idx}`} className="h-1" aria-hidden />;
     }
-    const sectionMatch = trimmed.match(/^(Interpretation|Function|Qabalistic Anchor|Formula Rationale):\s*(.*)$/);
+    const sectionMatch = trimmed.match(
+      /^(Interpretation|Function|Qabalistic Anchor|Protocol|Formula Rationale):\s*(.*)$/
+    );
     if (sectionMatch) {
       return (
         <p key={`help-line-${idx}`} className="leading-relaxed">
@@ -605,10 +619,15 @@ export default function Page() {
   const [freestyleOrderLog, setFreestyleOrderLog] = useState<FreestyleLogEntry[]>([]);
   const [activeHelpKey, setActiveHelpKey] = useState<Layer["key"] | null>(null);
   const [isGlobalHelpOpen, setIsGlobalHelpOpen] = useState(false);
-  const [showTreeOfLife, setShowTreeOfLife] = useState(true);
+  const [isOverlayHelpOpen, setIsOverlayHelpOpen] = useState(false);
+  const [showTreeOfLife, setShowTreeOfLife] = useState(false);
+  const [treeLayout, setTreeLayout] = useState<TreeLayout | null>(null);
+  const [selectedThothPath, setSelectedThothPath] = useState<ThothPath | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const rightPanelRef = useRef<HTMLDivElement | null>(null);
+  const treeLayoutRootRef = useRef<HTMLDivElement | null>(null);
+  const sephirahSlotRef = useRef<(HTMLDivElement | null)[]>(Array.from({ length: 10 }, () => null));
   const cardBackImage = "/images/card_back.jpg";
 
   const layerRef = useMemo(
@@ -640,8 +659,6 @@ export default function Page() {
     selectedCard.arcanaTitle
       ? `${selectedCard.rank} · ${selectedCard.arcanaTitle}`
       : selectedCard?.name ?? "";
-  const selectedFreestyleSequence =
-    selectedCardId && revealMode === "freestyle" ? freestyleOrderLog.findIndex((e) => e.cardId === selectedCardId) + 1 : 0;
   const elementLine = selectedCard
     ? formatElementLine(selectedCard.elementalAttribution, selectedCard.astrology.element)
     : null;
@@ -765,6 +782,32 @@ export default function Page() {
     img.src = cardBackImage;
   }, [cardBackImage]);
 
+  const assignSephirahNode = useCallback((n: number) => (el: HTMLDivElement | null) => {
+    if (n < 1 || n > 10) return;
+    sephirahSlotRef.current[n - 1] = el;
+  }, []);
+
+  const recomputeTreeLayout = useCallback(() => {
+    const root = treeLayoutRootRef.current;
+    if (!root) return;
+    const w = root.offsetWidth;
+    const h = root.offsetHeight;
+    if (w < 2 || h < 2) return;
+    const rroot = root.getBoundingClientRect();
+    const points: (null | { x: number; y: number })[] = Array.from({ length: 10 }, () => null);
+    for (let i = 0; i < 10; i++) {
+      const el = sephirahSlotRef.current[i];
+      if (!el) continue;
+      const re = el.getBoundingClientRect();
+      if (re.width < 0.5 && re.height < 0.5) continue;
+      points[i] = {
+        x: re.left - rroot.left + re.width / 2,
+        y: re.top - rroot.top + re.height / 2
+      };
+    }
+    setTreeLayout({ w, h, points });
+  }, []);
+
   const cardsByLayer = useMemo<ReactNode[][]>(
     () =>
       LAYERS.map((layer, layerIdx) => {
@@ -774,10 +817,11 @@ export default function Page() {
           const cards = drawn[layer.key] ?? [];
           return cards.map((card, idx) => {
             const slotKey = `${layer.key}__${idx}`;
+            const s = sephirahForLayerSlot(layerIdx, idx);
             const up = Boolean(freestyleFaceUp[slotKey]);
             if (up) {
               return (
-                <div key={slotKey} className="spread-tile spread-card-back-shell border">
+                <div key={slotKey} ref={s > 0 ? assignSephirahNode(s) : undefined} className="spread-tile spread-card-back-shell border">
                   <RevealedCardButton
                     card={card}
                     cardBackSrc={cardBackImage}
@@ -787,7 +831,11 @@ export default function Page() {
               );
             }
             return (
-              <div key={slotKey} className="spread-tile-back spread-card-back-shell border border-dashed">
+              <div
+                key={slotKey}
+                ref={s > 0 ? assignSephirahNode(s) : undefined}
+                className="spread-tile-back spread-card-back-shell border border-dashed"
+              >
                 <button
                   type="button"
                   onClick={() => revealFreestyleSlot(slotKey, card, op)}
@@ -815,22 +863,30 @@ export default function Page() {
 
         if (opened) {
           const cards = drawn[layer.key] ?? [];
-          return cards.map((card) => (
-            <div key={card.id} className="spread-tile spread-card-back-shell border">
-              <RevealedCardButton
-                card={card}
-                cardBackSrc={cardBackImage}
-                onOpen={() => setSelectedCardId(card.id)}
-              />
-            </div>
-          ));
+          return cards.map((card, cardIdx) => {
+            const s = sephirahForLayerSlot(layerIdx, cardIdx);
+            return (
+              <div key={card.id} ref={s > 0 ? assignSephirahNode(s) : undefined} className="spread-tile spread-card-back-shell border">
+                <RevealedCardButton
+                  card={card}
+                  cardBackSrc={cardBackImage}
+                  onOpen={() => setSelectedCardId(card.id)}
+                />
+              </div>
+            );
+          });
         }
 
         return Array.from({ length: layer.drawCount }, (_, placeholderIdx) => {
           const placeholderKey = `${layer.key}-placeholder-${placeholderIdx}`;
+          const s = sephirahForLayerSlot(layerIdx, placeholderIdx);
           if (isNextLayer) {
             return (
-              <div key={placeholderKey} className="spread-tile-back spread-card-back-shell border border-dashed">
+              <div
+                key={placeholderKey}
+                ref={s > 0 ? assignSephirahNode(s) : undefined}
+                className="spread-tile-back spread-card-back-shell border border-dashed"
+              >
                 <button
                   type="button"
                   onClick={nextStep}
@@ -853,6 +909,7 @@ export default function Page() {
           return (
             <div
               key={placeholderKey}
+              ref={s > 0 ? assignSephirahNode(s) : undefined}
               aria-label="card back (locked until previous draws)"
               className="spread-tile-back spread-card-back-shell border border-dashed"
             >
@@ -868,9 +925,28 @@ export default function Page() {
           );
         });
       }),
-    [drawn, cardBackImage, revealMode, freestyleFaceUp, revealFreestyleSlot, nextStep, step, revealOrder]
+    [drawn, cardBackImage, revealMode, freestyleFaceUp, revealFreestyleSlot, nextStep, step, revealOrder, assignSephirahNode]
   );
   const yetzirahCards = cardsByLayer[4] ?? [];
+
+  useLayoutEffect(() => {
+    if (!showTreeOfLife) {
+      setTreeLayout(null);
+      return;
+    }
+    recomputeTreeLayout();
+    const a = requestAnimationFrame(() => recomputeTreeLayout());
+    const root = treeLayoutRootRef.current;
+    if (!root) {
+      return () => cancelAnimationFrame(a);
+    }
+    const ro = new ResizeObserver(() => recomputeTreeLayout());
+    ro.observe(root);
+    return () => {
+      cancelAnimationFrame(a);
+      ro.disconnect();
+    };
+  }, [showTreeOfLife, recomputeTreeLayout, cardsByLayer, drawn, revealMode, freestyleFaceUp, step, revealOrder]);
 
   function renderTriadLabel(layerIndex: number, className: string) {
     const layer = LAYERS[layerIndex];
@@ -961,21 +1037,9 @@ export default function Page() {
           <h1 className={spread.title}>ATHANOR</h1>
 
           <div className="mt-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
-                <HelpIconButton label="Global logic help" onClick={() => setIsGlobalHelpOpen(true)} />
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={showTreeOfLife}
-                aria-label={showTreeOfLife ? "生命樹の背景をオフにする" : "生命樹の背景をオンにする"}
-                onClick={() => setShowTreeOfLife((v) => !v)}
-                className="spread-btn-ghost shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium sm:text-xs"
-              >
-                {showTreeOfLife ? "Tree · on" : "Tree · off"}
-              </button>
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
+              <HelpIconButton label="Global logic help" onClick={() => setIsGlobalHelpOpen(true)} />
             </div>
             <div className={spread.modePillRow} role="group" aria-label="Reveal order mode">
               <button
@@ -997,7 +1061,14 @@ export default function Page() {
                 onClick={() => selectRevealMode("freestyle")}
                 className={`spread-mode-pill min-h-10 ${revealMode === "freestyle" ? "is-active" : ""}`}
               >
-                <span className={revealMode === "freestyle" ? "spread-txt-strong" : "spread-txt-faint"}>Free</span>
+                <span
+                  className={[
+                    revealMode === "freestyle" ? "spread-txt-strong" : "spread-txt-faint",
+                    "text-[0.6rem] font-semibold tracking-[0.14em] sm:text-[0.7rem] sm:tracking-[0.16em]"
+                  ].join(" ")}
+                >
+                  UNBOUND
+                </span>
               </button>
             </div>
           </div>
@@ -1018,61 +1089,112 @@ export default function Page() {
               </button>
             </div>
           )}
+
+          <div className="mt-3 flex w-full min-w-0 items-center justify-start gap-1.5 sm:gap-2">
+            <span
+              className="text-[9px] font-semibold leading-none tracking-[0.2em] text-slate-200/90 sm:text-[10px]"
+              id="tree-overlay-label"
+            >
+              OVERLAY
+            </span>
+            <HelpIconButton
+              label="Help: Sephirotic overlay"
+              onClick={() => setIsOverlayHelpOpen(true)}
+            />
+            <button
+              type="button"
+              id="tree-overlay-switch"
+              role="switch"
+              aria-checked={showTreeOfLife}
+              aria-labelledby="tree-overlay-label"
+              title={showTreeOfLife ? "生命の樹オーバーレイ：オン" : "生命の樹オーバーレイ：オフ"}
+              onClick={() => setShowTreeOfLife((v) => !v)}
+              className={[
+                "overlay-toggle-switch relative h-5 w-9 shrink-0 rounded-full border transition-colors",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950/80",
+                showTreeOfLife ? "is-on" : null
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <span
+                aria-hidden
+                className={[
+                  "pointer-events-none absolute top-0.5 left-0.5 block h-4 w-4 rounded-full bg-white shadow",
+                  "transition-transform duration-200 ease-out will-change-transform",
+                  showTreeOfLife ? "translate-x-4" : "translate-x-0"
+                ].join(" ")}
+              />
+            </button>
+          </div>
         </section>
-        <section ref={rightPanelRef} className={`${spread.canvas} relative`}>
-          {showTreeOfLife ? (
-            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-[0.4] sm:opacity-50">
-              <TreeOfLifeBackground />
-            </div>
-          ) : null}
-          <div className="relative z-[1] flex flex-col items-center gap-4">
-            <div className={spread.worldCard}>
-              <p className={spread.worldLabel}>Atziluth</p>
-              <div className="flex flex-col items-center">
-                {renderTriadLabel(0, "mb-3")}
-                <div ref={layerRef[LAYERS[0].key]} className="spread-card-row">
-                  {cardsByLayer[0]}
-                </div>
-                {renderTriadLabel(1, "mt-4 mb-3")}
-                <div ref={layerRef[LAYERS[1].key]} className="spread-card-row">
-                  {cardsByLayer[1]}
+        <section ref={rightPanelRef} className={spread.canvas}>
+          <div ref={treeLayoutRootRef} className="relative z-0 mx-auto w-full max-w-xl">
+            {showTreeOfLife && treeLayout ? (
+              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
+                <TreeOfLifeLines layout={treeLayout} />
+              </div>
+            ) : null}
+            <div className="spread-canvas-surface relative z-[1] flex w-full flex-col items-center gap-8 sm:gap-10">
+              <div className={spread.worldCard}>
+                <p className={spread.worldLabel}>Atziluth</p>
+                <div className="flex flex-col items-center">
+                  {renderTriadLabel(0, "mb-4")}
+                  <div ref={layerRef[LAYERS[0].key]} className="spread-card-row">
+                    {cardsByLayer[0]}
+                  </div>
+                  {renderTriadLabel(1, "mb-4 mt-6 sm:mt-7")}
+                  <div ref={layerRef[LAYERS[1].key]} className="spread-card-row--pair-wide">
+                    {cardsByLayer[1]}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className={spread.worldCard}>
-              <p className={spread.worldLabel}>Briah</p>
-              <div className="flex flex-col items-center">
-                {renderTriadLabel(2, "mb-3")}
-                <div ref={layerRef[LAYERS[2].key]} className="spread-card-row">
-                  {cardsByLayer[2]}
-                </div>
-                {renderTriadLabel(3, "mt-4 mb-3")}
-                <div ref={layerRef[LAYERS[3].key]} className="spread-card-row">
-                  {cardsByLayer[3]}
+              <div className={spread.worldCard}>
+                <p className={spread.worldLabel}>Briah</p>
+                <div className="flex flex-col items-center">
+                  {renderTriadLabel(2, "mb-4")}
+                  <div ref={layerRef[LAYERS[2].key]} className="spread-card-row--pair-wide">
+                    {cardsByLayer[2]}
+                  </div>
+                  {renderTriadLabel(3, "mt-7 mb-4 sm:mt-8")}
+                  <div ref={layerRef[LAYERS[3].key]} className="spread-card-row">
+                    {cardsByLayer[3]}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className={spread.worldCard}>
-              <p className={spread.worldLabel}>Yetzirah</p>
-              {renderTriadLabel(4, "mb-3")}
-              <div ref={layerRef[LAYERS[4].key]} className="mx-auto grid w-fit grid-cols-2 gap-3">
-                {yetzirahCards[0]}
-                {yetzirahCards[1]}
-                <div className="col-span-2 -mt-1 flex justify-center">{yetzirahCards[2]}</div>
+              <div className={spread.worldCard}>
+                <p className={spread.worldLabel}>Yetzirah</p>
+                {renderTriadLabel(4, "mb-4")}
+                <div
+                  ref={layerRef[LAYERS[4].key]}
+                  className="mx-auto grid w-fit max-w-full grid-cols-2 [column-gap:clamp(2.4rem,12vw,10.5rem)] [row-gap:1.2rem] sm:[column-gap:min(10.5rem,36vw)] sm:[row-gap:1.45rem]"
+                >
+                  {yetzirahCards[0]}
+                  {yetzirahCards[1]}
+                  <div className="col-span-2 -mt-0.5 flex justify-center pt-1.5 sm:pt-2">{yetzirahCards[2]}</div>
+                </div>
               </div>
-            </div>
 
-            <div className={spread.worldCard}>
-              <p className={spread.worldLabel}>Assiah</p>
-              <div className="flex flex-col items-center">
-                {renderTriadLabel(5, "mb-3")}
-                <div ref={layerRef[LAYERS[5].key]} className="spread-card-row">
-                  {cardsByLayer[5]}
+              <div className={spread.worldCard}>
+                <p className={spread.worldLabel}>Assiah</p>
+                <div className="flex flex-col items-center">
+                  {renderTriadLabel(5, "mb-4")}
+                  <div ref={layerRef[LAYERS[5].key]} className="spread-card-row">
+                    {cardsByLayer[5]}
+                  </div>
                 </div>
               </div>
             </div>
+            {showTreeOfLife && treeLayout ? (
+              <div
+                className="pointer-events-none absolute inset-0 z-[2] min-h-0 w-full min-w-0"
+                aria-hidden
+              >
+                <TreePathHitLayer layout={treeLayout} onPathSelect={setSelectedThothPath} />
+              </div>
+            ) : null}
           </div>
         </section>
       </div>
@@ -1141,8 +1263,8 @@ export default function Page() {
               narrative is integrated back toward essence.
             </p>
             <p>
-              <strong className="spread-triad font-semibold">Free</strong> keeps the same Tree of sephiroth
-              layout, but the full spread is dealt at once, face down. You choose which layer to turn next.
+              <strong className="spread-triad font-semibold">UNBOUND</strong> bypasses the sequential flow of the Tree,
+              allowing for non-linear observation. Use this to sample specific nodes directly through your own will.
             </p>
           </div>
           <div className="mt-2 text-sm text-indigo-100/90">
@@ -1178,6 +1300,79 @@ export default function Page() {
         </SpreadDialog>
       ) : null}
 
+      {isOverlayHelpOpen ? (
+        <SpreadDialog
+          aria-label="Sephirotic overlay help"
+          z="help"
+          maxWidth="md"
+          onClose={() => setIsOverlayHelpOpen(false)}
+        >
+          <div className={spread.modalHeader}>
+            <div>
+              <h3 className="spread-triad text-base font-semibold">The Sephirotic Overlay</h3>
+              <p className="spread-hint mt-1 text-xs font-medium tracking-[0.16em] text-indigo-200/75">[OVERLAY]</p>
+            </div>
+            <ModalCloseButton onClick={() => setIsOverlayHelpOpen(false)} />
+          </div>
+          <p className="spread-hint mt-3 text-sm leading-relaxed text-indigo-100/80 opacity-80">{OVERLAY_HELP_INTRO}</p>
+          <div className="spread-hint mt-3 text-sm text-indigo-100/80 opacity-80">
+            {renderHelpBody(OVERLAY_HELP_SECTIONS)}
+          </div>
+          <p className="mt-2 text-sm leading-relaxed">
+            <strong className="spread-triad font-semibold">Formula Rationale:</strong>{" "}
+            <span className="text-indigo-100/80 opacity-80">
+              The path is an operator: two Sephira (the cards at its ends) are its arguments, and the major arcana
+              assigned to that path mediates the result.
+            </span>
+          </p>
+          <p className="spread-hint mt-2 text-sm leading-relaxed text-indigo-100/80 opacity-80">
+            Toggle <span className="font-medium tracking-wider text-indigo-100/90">OVERLAY</span> to show or hide the map and
+            the path thumbnails; turn it off for an unobstructed read of the cards.
+          </p>
+          <div className="mt-2 text-sm text-blue-400/95">
+            <LatexBlock
+              tex={
+                "\\mathrm{Result} = T_{\\mathrm{path}}(\\mathrm{Card}_a,\\, \\mathrm{Card}_b)"
+              }
+            />
+          </div>
+        </SpreadDialog>
+      ) : null}
+
+      {selectedThothPath ? (
+        <SpreadDialog
+          aria-label="Thoth path"
+          z="help"
+          maxWidth="md"
+          onClose={() => setSelectedThothPath(null)}
+        >
+          <div className={spread.modalHeader}>
+            <img
+              src={selectedThothPath.image}
+              alt=""
+              className="h-[5.5rem] w-[3.9rem] shrink-0 rounded-md border border-white/15 object-cover sm:h-24 sm:w-[4.5rem]"
+            />
+            <div className="min-w-0 flex-1">
+              <h3 className="spread-triad text-base font-semibold">
+                Path {selectedThothPath.id} · {selectedThothPath.card}
+              </h3>
+            </div>
+            <ModalCloseButton onClick={() => setSelectedThothPath(null)} />
+          </div>
+          <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
+            <p>
+              <span className="text-indigo-100/90">Hebrew letter:</span> {selectedThothPath.letter}
+            </p>
+            <p>
+              <span className="text-indigo-100/90">Vector:</span> Sephirah {selectedThothPath.vector[0]} ↔ {selectedThothPath.vector[1]}
+            </p>
+            <p>
+              <span className="text-indigo-100/90">Function:</span> {selectedThothPath.function}
+            </p>
+          </div>
+        </SpreadDialog>
+      ) : null}
+
       {selectedCard ? (
         <SpreadDialog
           aria-label="Card details"
@@ -1197,11 +1392,6 @@ export default function Page() {
             />
             <div className="spread-hint text-sm leading-relaxed">
               <h3 className="spread-triad text-base font-semibold">{selectedCardModalTitle}</h3>
-              {revealMode === "freestyle" && selectedFreestyleSequence > 0 ? (
-                <p className="spread-hint mt-1 text-xs opacity-90">
-                  Opened #{selectedFreestyleSequence} in this session&apos;s free order.
-                </p>
-              ) : null}
               <div className="mt-2 grid grid-cols-1 gap-x-5 gap-y-1.5 md:grid-cols-2">
                 {selectedCard.suit ? <p className="min-w-0 leading-snug">Suit: {selectedCard.suit}</p> : null}
                 {showRankInModal ? (

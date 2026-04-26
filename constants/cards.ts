@@ -116,6 +116,7 @@ const SUIT_DATA = {
   }
 } as const;
 
+/** The twelve zodiac major arcana; each one’s Hebrew path follows Thoth. AL II:76: Tzaddi is not the Star. */
 const ZODIAC_DESTINY = [
   {
     id: "aries-emperor",
@@ -125,8 +126,9 @@ const ZODIAC_DESTINY = [
     image: "/images/the-emperor.png",
     element: "Fire",
     modality: "Cardinal",
-    hebrewLetter: "ה (Heh)",
-    treeOfLifePath: "4. Chesed - 6. Tiphareth"
+    /** Tzaddi → Emperor (Liber AL; 777 path 28, 7–9). */
+    hebrewLetter: "צ (Tzaddi)",
+    treeOfLifePath: "7. Netzach - 9. Yesod"
   },
   {
     id: "taurus-hierophant",
@@ -235,7 +237,8 @@ const ZODIAC_DESTINY = [
     image: "/images/the-star.png",
     element: "Air",
     modality: "Fixed",
-    hebrewLetter: "צ (Tzaddi)",
+    /** Heh → The Star; Tzaddi is the Emperor (Liber AL). Path 15, 2–6. */
+    hebrewLetter: "ה (Heh)",
     treeOfLifePath: "2. Chokmah - 6. Tiphareth"
   },
   {
@@ -277,7 +280,7 @@ const PLANET_FOCUS = [
     dayOfWeek: "Sunday",
     metal: "Gold",
     hebrewLetter: "ר (Resh)",
-    treeOfLifePath: "8. Hod - 6. Tiphareth"
+    treeOfLifePath: "8. Hod - 9. Yesod"
   },
   {
     id: "moon",
@@ -325,7 +328,7 @@ const PLANET_FOCUS = [
     dayOfWeek: "Tuesday",
     metal: "Iron",
     hebrewLetter: "פ (Peh)",
-    treeOfLifePath: "5. Geburah - 8. Hod"
+    treeOfLifePath: "7. Netzach - 8. Hod"
   },
   {
     id: "jupiter",
@@ -373,7 +376,7 @@ const PLANET_FOCUS = [
     dayOfWeek: "Thursday",
     metal: "Neptunium",
     hebrewLetter: "מ (Mem)",
-    treeOfLifePath: "3. Binah - 5. Geburah"
+    treeOfLifePath: "5. Geburah - 8. Hod"
   },
   {
     id: "pluto",
