@@ -620,6 +620,7 @@ export default function Page() {
   const [activeHelpKey, setActiveHelpKey] = useState<Layer["key"] | null>(null);
   const [isGlobalHelpOpen, setIsGlobalHelpOpen] = useState(false);
   const [isOverlayHelpOpen, setIsOverlayHelpOpen] = useState(false);
+  const [showMobileAdvancedControls, setShowMobileAdvancedControls] = useState(false);
   const [seedHelpTarget, setSeedHelpTarget] = useState<"will" | "gaze" | null>(null);
   const [isEchoHelpOpen, setIsEchoHelpOpen] = useState(false);
   const [manualSeedEnabled, setManualSeedEnabled] = useState(false);
@@ -1143,6 +1144,51 @@ export default function Page() {
         <section className={spread.rail}>
           <h1 className={spread.title}>ATHANOR</h1>
 
+          {revealMode === "freestyle" ? (
+            <div className="mt-3 w-full">
+              <button type="button" onClick={dealFreestyle} className={`${spread.drawBtn} w-full`}>
+                Reset
+              </button>
+            </div>
+          ) : (
+            <div className={spread.controlGrid}>
+              <button type="button" onClick={nextStep} disabled={completed} className={spread.drawBtn}>
+                {completed ? "All Revealed" : `Draw (${step + 1}/6)`}
+              </button>
+              <button type="button" onClick={reset} className={spread.resetBtn}>
+                Reset
+              </button>
+            </div>
+          )}
+
+          <div className="mt-2 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setShowMobileAdvancedControls((v) => !v)}
+              className="spread-btn-ghost flex w-full items-center justify-center rounded-md px-3 py-2"
+              aria-expanded={showMobileAdvancedControls}
+              aria-controls="mobile-advanced-controls"
+              aria-label={showMobileAdvancedControls ? "Hide controls" : "Show controls"}
+            >
+              <span
+                aria-hidden
+                className={`text-lg leading-none opacity-90 transition-transform duration-200 ${
+                  showMobileAdvancedControls ? "rotate-180" : ""
+                }`}
+              >
+                ▾
+              </span>
+            </button>
+          </div>
+
+          <div
+            id="mobile-advanced-controls"
+            className={[
+              "overflow-hidden transition-all duration-200 ease-out",
+              showMobileAdvancedControls ? "max-h-[48rem] opacity-100" : "max-h-0 opacity-0 lg:max-h-[48rem] lg:opacity-100",
+              "lg:block"
+            ].join(" ")}
+          >
           <div className="mt-3">
             <div className="flex min-w-0 items-center gap-2">
               <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
@@ -1293,23 +1339,6 @@ export default function Page() {
               </div>
             </div>
           ) : null}
-          {revealMode === "freestyle" ? (
-            <div className="mt-3 w-full">
-              <button type="button" onClick={dealFreestyle} className={`${spread.drawBtn} w-full`}>
-                Reset
-              </button>
-            </div>
-          ) : (
-            <div className={spread.controlGrid}>
-              <button type="button" onClick={nextStep} disabled={completed} className={spread.drawBtn}>
-                {completed ? "All Revealed" : `Draw (${step + 1}/6)`}
-              </button>
-              <button type="button" onClick={reset} className={spread.resetBtn}>
-                Reset
-              </button>
-            </div>
-          )}
-
           <div className="mt-2 w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2">
             <div className="flex w-full min-w-0 items-center justify-start gap-1.5 sm:gap-2">
               <span
@@ -1348,6 +1377,7 @@ export default function Page() {
                 />
               </button>
             </div>
+          </div>
           </div>
         </section>
         <section ref={rightPanelRef} className={spread.canvas}>
@@ -1612,7 +1642,7 @@ export default function Page() {
           </div>
           <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
             <p>
-              In <strong className="spread-triad font-semibold">Centric</strong> mode, this protocol establishes a
+              In <strong className="spread-triad font-semibold">Spectrum</strong> mode, this protocol establishes a
               harmonic anchor at Tiphareth (6).
             </p>
             <p>
