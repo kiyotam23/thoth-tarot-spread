@@ -40,7 +40,7 @@ const spread = {
   floatReset:
     "spread-float-reset min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold supports-[backdrop-filter]:backdrop-blur-sm transition",
   controlGrid: "mt-3 grid w-full grid-cols-2 gap-2",
-  modePillRow: "mt-1.5 grid w-full min-w-0 grid-cols-3 gap-2 sm:gap-3",
+  modePillRow: "mt-1.5 grid w-full min-w-0 grid-cols-3 gap-2 px-0.5 sm:gap-3",
   layerExecutionFixed:
     "pointer-events-auto fixed right-3 top-3 z-30 w-auto min-w-0 text-right sm:right-5 sm:top-5",
   sephiroticPanel:
@@ -627,6 +627,7 @@ export default function Page() {
   const [manualSeedCardId, setManualSeedCardId] = useState<string | null>(null);
   const [echoEnabled, setEchoEnabled] = useState(false);
   const [echoCardId, setEchoCardId] = useState<string | null>(null);
+  const [echoSeedApplied, setEchoSeedApplied] = useState(false);
   const [showTreeOfLife, setShowTreeOfLife] = useState(false);
   const [treeLayout, setTreeLayout] = useState<TreeLayout | null>(null);
   const [selectedThothPath, setSelectedThothPath] = useState<ThothPath | null>(null);
@@ -694,6 +695,10 @@ export default function Page() {
     () => Object.values(freestyleFaceUp).filter(Boolean).length,
     [freestyleFaceUp]
   );
+  const echoLocked =
+    revealMode === "freestyle" &&
+    freestyleRevealedCount > 0 &&
+    !(echoSeedApplied && freestyleRevealedCount === 1);
   const completed = isSequential ? step === LAYERS.length : revealMode === "freestyle" && freestyleRevealedCount >= TOTAL_SPREAD_CARDS;
 
   const litOperatorIndexSet = useMemo(() => {
@@ -709,6 +714,7 @@ export default function Page() {
     setDrawn(d);
     setFreestyleFaceUp({});
     setFreestyleOrderLog([]);
+    setEchoSeedApplied(false);
     setStep(0);
     setSelectedCardId(null);
   }, []);
@@ -723,6 +729,7 @@ export default function Page() {
         setManualSeedEnabled(false);
         setManualSeedCardId(null);
         setEchoCardId(null);
+        setEchoSeedApplied(false);
         const d = dealAllLayers();
         preloadImageUrls(Object.values(d).flatMap((c) => c.map((x) => x.image)));
         setDrawn(d);
@@ -731,6 +738,7 @@ export default function Page() {
       } else {
         setEchoEnabled(false);
         setEchoCardId(null);
+        setEchoSeedApplied(false);
         setManualSeedCardId(null);
         setDrawn({});
         setFreestyleFaceUp({});
@@ -772,6 +780,7 @@ export default function Page() {
       if (prev[slotKey]) return prev;
       return { ...prev, [slotKey]: true };
     });
+    setEchoSeedApplied(false);
     setFreestyleOrderLog((prev) => {
       if (prev.some((e) => e.slotKey === slotKey)) return prev;
       return [...prev, { slotKey, cardId: card.id, name: card.name, op, sephirah: sephirahForSlotKey(slotKey) }];
@@ -829,6 +838,7 @@ export default function Page() {
       next[idx] = { ...next[idx], cardId: selected.id, name: selected.name };
       return next;
     });
+    setEchoSeedApplied(true);
     requestAnimationFrame(() => {
       scrollToLayer(3); // Tiphareth / Destiny layer
     });
@@ -1145,8 +1155,11 @@ export default function Page() {
           <h1 className={spread.title}>ATHANOR</h1>
 
           {revealMode === "freestyle" ? (
-            <div className="mt-3 w-full">
-              <button type="button" onClick={dealFreestyle} className={`${spread.drawBtn} w-full`}>
+            <div className={spread.controlGrid}>
+              <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
+                <p className="spread-hint flex items-center text-xs opacity-85">Tap or click cards.</p>
+              </div>
+              <button type="button" onClick={dealFreestyle} className={spread.resetBtn}>
                 Reset
               </button>
             </div>
@@ -1184,7 +1197,7 @@ export default function Page() {
           <div
             id="mobile-advanced-controls"
             className={[
-              "overflow-hidden transition-all duration-200 ease-out",
+              "overflow-x-visible overflow-y-hidden transition-all duration-200 ease-out",
               showMobileAdvancedControls ? "max-h-[48rem] opacity-100" : "max-h-0 opacity-0 lg:max-h-[48rem] lg:opacity-100",
               "lg:block"
             ].join(" ")}
@@ -1234,7 +1247,7 @@ export default function Page() {
                   role="switch"
                   aria-checked={manualSeedEnabled}
                   aria-label={manualSeedEnabled ? "Disable SEED first pick" : "Enable SEED first pick"}
-                  disabled={step > 1}
+                  disabled={step > 0}
                   onClick={() => {
                     setManualSeedEnabled((v) => {
                       const next = !v;
@@ -1250,7 +1263,7 @@ export default function Page() {
                   }}
                   className={[
                     "seed-mode-pill inline-flex min-h-7 items-center rounded-full border px-2.5 text-[10px] font-semibold tracking-[0.16em] transition",
-                    step > 1
+                    step > 0
                       ? "border-white/20 bg-white/5 spread-txt-faint opacity-65 cursor-not-allowed"
                       : manualSeedEnabled
                       ? "is-on"
@@ -1269,7 +1282,7 @@ export default function Page() {
                       className="min-w-0 flex-1 rounded-md border border-white/20 bg-black/35 px-2 py-1 text-xs text-slate-100/95 outline-none focus:border-indigo-300/60"
                       value={manualSeedCardId ?? ""}
                       onChange={(e) => setManualSeedCardId(e.target.value || null)}
-                      disabled={step > 1}
+                      disabled={step > 0}
                       aria-label="Choose seed card"
                     >
                       <option value="" disabled>
@@ -1302,6 +1315,7 @@ export default function Page() {
                   role="switch"
                   aria-checked={echoEnabled}
                   aria-label={echoEnabled ? "Disable ECHO option" : "Enable ECHO option"}
+                  disabled={echoLocked}
                   onClick={() => {
                     setEchoEnabled((v) => {
                       const next = !v;
@@ -1311,7 +1325,11 @@ export default function Page() {
                   }}
                   className={[
                     "seed-mode-pill inline-flex min-h-7 items-center rounded-full border px-2.5 text-[10px] font-semibold tracking-[0.16em] transition",
-                    echoEnabled ? "is-on" : "border-white/25 bg-white/5 spread-txt-faint"
+                    echoLocked
+                      ? "border-white/20 bg-white/5 spread-txt-faint opacity-65 cursor-not-allowed"
+                      : echoEnabled
+                      ? "is-on"
+                      : "border-white/25 bg-white/5 spread-txt-faint"
                   ].join(" ")}
                 >
                   ECHO
@@ -1322,6 +1340,7 @@ export default function Page() {
                     className="min-w-0 flex-1 rounded-md border border-white/20 bg-black/35 px-2 py-1 text-xs text-slate-100/95 outline-none focus:border-indigo-300/60"
                     value={echoCardId ?? ""}
                     onChange={(e) => setEchoCardId(e.target.value || null)}
+                    disabled={echoLocked}
                     aria-label="Choose ECHO zodiac major"
                   >
                     <option value="" disabled>
