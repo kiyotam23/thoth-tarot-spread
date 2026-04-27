@@ -699,6 +699,7 @@ export default function Page() {
     revealMode === "freestyle" &&
     freestyleRevealedCount > 0 &&
     !(echoSeedApplied && freestyleRevealedCount === 1);
+  const seedLocked = isSequential && step > 0 && (!manualSeedEnabled || step > 1);
   const completed = isSequential ? step === LAYERS.length : revealMode === "freestyle" && freestyleRevealedCount >= TOTAL_SPREAD_CARDS;
 
   const litOperatorIndexSet = useMemo(() => {
@@ -1247,7 +1248,7 @@ export default function Page() {
                   role="switch"
                   aria-checked={manualSeedEnabled}
                   aria-label={manualSeedEnabled ? "Disable SEED first pick" : "Enable SEED first pick"}
-                  disabled={step > 0}
+                  disabled={seedLocked}
                   onClick={() => {
                     setManualSeedEnabled((v) => {
                       const next = !v;
@@ -1263,7 +1264,7 @@ export default function Page() {
                   }}
                   className={[
                     "seed-mode-pill inline-flex min-h-7 items-center rounded-full border px-2.5 text-[10px] font-semibold tracking-[0.16em] transition",
-                    step > 0
+                    seedLocked
                       ? "border-white/20 bg-white/5 spread-txt-faint opacity-65 cursor-not-allowed"
                       : manualSeedEnabled
                       ? "is-on"
@@ -1282,7 +1283,7 @@ export default function Page() {
                       className="min-w-0 flex-1 rounded-md border border-white/20 bg-black/35 px-2 py-1 text-xs text-slate-100/95 outline-none focus:border-indigo-300/60"
                       value={manualSeedCardId ?? ""}
                       onChange={(e) => setManualSeedCardId(e.target.value || null)}
-                      disabled={step > 0}
+                      disabled={seedLocked}
                       aria-label="Choose seed card"
                     >
                       <option value="" disabled>
