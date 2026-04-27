@@ -1315,7 +1315,7 @@ export default function Page() {
                   type="button"
                   role="switch"
                   aria-checked={echoEnabled}
-                  aria-label={echoEnabled ? "Disable ECHO option" : "Enable ECHO option"}
+                  aria-label={echoEnabled ? "Disable Fate option" : "Enable Fate option"}
                   disabled={echoLocked}
                   onClick={() => {
                     setEchoEnabled((v) => {
@@ -1333,16 +1333,16 @@ export default function Page() {
                       : "border-white/25 bg-white/5 spread-txt-faint"
                   ].join(" ")}
                 >
-                  ECHO
+                  Fate
                 </button>
-                <HelpIconButton label="Help: ECHO seed option" onClick={() => setIsEchoHelpOpen(true)} />
+                <HelpIconButton label="Help: Fate option" onClick={() => setIsEchoHelpOpen(true)} />
                 {echoEnabled ? (
                   <select
                     className="min-w-0 flex-1 rounded-md border border-white/20 bg-black/35 px-2 py-1 text-xs text-slate-100/95 outline-none focus:border-indigo-300/60"
                     value={echoCardId ?? ""}
                     onChange={(e) => setEchoCardId(e.target.value || null)}
                     disabled={echoLocked}
-                    aria-label="Choose ECHO zodiac major"
+                    aria-label="Choose Fate zodiac major"
                   >
                     <option value="" disabled>
                       Select one...
@@ -1354,7 +1354,7 @@ export default function Page() {
                     ))}
                   </select>
                 ) : (
-                  <p className="spread-hint text-[10px] leading-tight opacity-90">OPTION SELECT ECHO</p>
+                  <p className="spread-hint text-[10px] leading-tight opacity-90">OPTION SELECT FATE</p>
                 )}
               </div>
             </div>
@@ -1655,9 +1655,9 @@ export default function Page() {
       ) : null}
 
       {isEchoHelpOpen ? (
-        <SpreadDialog aria-label="ECHO seed help" z="help" maxWidth="md" onClose={() => setIsEchoHelpOpen(false)}>
+        <SpreadDialog aria-label="Fate option help" z="help" maxWidth="md" onClose={() => setIsEchoHelpOpen(false)}>
           <div className={spread.modalHeader}>
-            <h3 className="spread-triad text-base font-semibold">ECHO Seed Option</h3>
+            <h3 className="spread-triad text-base font-semibold">Fate Option</h3>
             <ModalCloseButton onClick={() => setIsEchoHelpOpen(false)} />
           </div>
           <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
