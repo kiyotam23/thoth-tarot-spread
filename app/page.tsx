@@ -1176,7 +1176,7 @@ export default function Page() {
                   "text-[0.6rem] font-semibold tracking-[0.14em] sm:text-[0.7rem] sm:tracking-[0.16em]"
                 ].join(" ")}
               >
-                Cross
+                Spectrum
               </span>
             </button>
           </div>
@@ -1485,7 +1485,7 @@ export default function Page() {
               narrative is integrated back toward essence.
             </p>
             <p>
-              <strong className="spread-triad font-semibold">Cross</strong> bypasses the sequential flow of the Tree,
+              <strong className="spread-triad font-semibold">Spectrum</strong> bypasses the sequential flow of the Tree,
               allowing for non-linear observation. Use this to sample specific nodes directly through your own will.
             </p>
           </div>
@@ -1612,9 +1612,13 @@ export default function Page() {
           </div>
           <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
             <p>
-              Set the harmonic center. By fixing a Zodiacal Major at Tiphareth, the system resonates your core identity
-              through the entire Tree, revealing how your inner nature echoes in both the Divine Will and the Physical
-              Reality.
+              In <strong className="spread-triad font-semibold">Centric</strong> mode, this protocol establishes a
+              harmonic anchor at Tiphareth (6).
+            </p>
+            <p>
+              By fixing a Zodiacal Major as the seed, the system defines a specific archetypal nature as the center of
+              the spread. This allows you to observe how that chosen nature resonates through the entire Tree, mapping
+              its alignment with higher Will and its manifestation in Reality.
             </p>
           </div>
         </SpreadDialog>
