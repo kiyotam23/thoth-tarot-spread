@@ -83,7 +83,7 @@ const MANUAL_JP = {
         "・WILL: 四大元素（スート）をケテル(1)に置く。",
         "・GAZE: 惑星（Planets）をマルクト(10)に置く。",
         "・FATE: 星座（Zodiac）をティファレト(6)に置く。",
-        "Full Random（委ねる）: 自己欺瞞を排除し、盲点を突く。"
+        "Full Random: 自己欺瞞を排除し、盲点を突く。"
       ]
     },
     {
