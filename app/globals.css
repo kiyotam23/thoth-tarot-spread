@@ -103,8 +103,8 @@ main[data-theme="ascending"] .spread-mode-pill.is-active {
   background: rgba(180, 50, 80, 0.3);
 }
 main[data-theme="freestyle"] .spread-mode-pill.is-active {
-  box-shadow: 0 0 0 1px rgba(100, 200, 170, 0.45);
-  background: rgba(30, 120, 90, 0.35);
+  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.42);
+  background: rgba(96, 64, 153, 0.3);
 }
 
 .spread-panel-fade {
@@ -128,7 +128,20 @@ main[data-theme="descending"] {
   position: relative;
   isolation: isolate;
   color: #edf0ff;
-  background: radial-gradient(circle at 20% 10%, #131c3f 0%, #070a14 45%, #03040b 100%);
+  background: radial-gradient(circle at 20% 10%, #102554 0%, #08142a 45%, #030815 100%);
+  --theme-ink-strong: #e6efff;
+  --theme-ink-soft: rgba(214, 231, 255, 0.9);
+  --theme-ink-faint: rgba(147, 197, 253, 0.46);
+  --theme-line: rgba(147, 197, 253, 0.24);
+  --theme-line-soft: rgba(147, 197, 253, 0.14);
+  --theme-accent: rgba(59, 130, 246, 0.34);
+  --theme-accent-hover: rgba(96, 165, 250, 0.42);
+  --theme-accent-line: rgba(147, 197, 253, 0.42);
+  --theme-panel: rgba(10, 20, 42, 0.56);
+  --theme-panel-hover: rgba(15, 30, 58, 0.72);
+  --theme-switch-grad-a: rgba(37, 99, 235, 0.9);
+  --theme-switch-grad-b: rgba(29, 78, 216, 0.96);
+  --theme-ring: rgba(147, 197, 253, 0.5);
 }
 
 /* Ascending (Assiah → Atziluth): burgundy / wine */
@@ -138,6 +151,19 @@ main[data-theme="ascending"] {
   isolation: isolate;
   color: #f5e1e6;
   background: radial-gradient(circle at 18% 8%, #4a1c28 0%, #1e0a10 45%, #0a0305 100%);
+  --theme-ink-strong: #ffe9ef;
+  --theme-ink-soft: rgba(255, 222, 232, 0.92);
+  --theme-ink-faint: rgba(255, 170, 190, 0.46);
+  --theme-line: rgba(251, 146, 170, 0.26);
+  --theme-line-soft: rgba(251, 146, 170, 0.14);
+  --theme-accent: rgba(190, 70, 98, 0.36);
+  --theme-accent-hover: rgba(219, 92, 120, 0.46);
+  --theme-accent-line: rgba(251, 146, 170, 0.44);
+  --theme-panel: rgba(46, 15, 24, 0.58);
+  --theme-panel-hover: rgba(66, 20, 34, 0.74);
+  --theme-switch-grad-a: rgba(157, 42, 72, 0.92);
+  --theme-switch-grad-b: rgba(117, 29, 52, 0.96);
+  --theme-ring: rgba(251, 146, 170, 0.46);
 }
 
 /* Freestyle (scatter, open in any order): jade / deep smoke */
@@ -145,8 +171,21 @@ main[data-theme="freestyle"] {
   min-height: 100vh;
   position: relative;
   isolation: isolate;
-  color: #e4f0ec;
-  background: radial-gradient(circle at 22% 10%, #1a2e2a 0%, #0a120f 50%, #030806 100%);
+  color: #ede8ff;
+  background: radial-gradient(circle at 22% 10%, #2d1852 0%, #130a22 50%, #07030d 100%);
+  --theme-ink-strong: #f1eaff;
+  --theme-ink-soft: rgba(232, 220, 255, 0.92);
+  --theme-ink-faint: rgba(196, 181, 253, 0.48);
+  --theme-line: rgba(167, 139, 250, 0.24);
+  --theme-line-soft: rgba(167, 139, 250, 0.12);
+  --theme-accent: rgba(124, 94, 198, 0.34);
+  --theme-accent-hover: rgba(147, 117, 220, 0.42);
+  --theme-accent-line: rgba(196, 181, 253, 0.4);
+  --theme-panel: rgba(32, 18, 52, 0.58);
+  --theme-panel-hover: rgba(44, 24, 70, 0.74);
+  --theme-switch-grad-a: rgba(126, 58, 191, 0.92);
+  --theme-switch-grad-b: rgba(91, 33, 182, 0.96);
+  --theme-ring: rgba(196, 181, 253, 0.48);
 }
 
 main[data-theme="descending"]::before,
@@ -183,11 +222,11 @@ main[data-theme="freestyle"] > :not(.fixed) {
 }
 
 main[data-theme="descending"] .spread-outer {
-  border-color: rgba(199, 210, 254, 0.12);
+  border-color: rgba(186, 214, 255, 0.16);
   background: rgba(255, 255, 255, 0.08);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 10px 30px rgba(80, 110, 255, 0.2);
+    0 10px 30px rgba(60, 135, 255, 0.24);
 }
 
 /* Main canvas: no fill; hairline border only (separates control rail from spread) */
@@ -243,9 +282,9 @@ main[data-theme] button.overlay-toggle-switch {
   background: rgba(255, 255, 255, 0.1);
 }
 main[data-theme="descending"] button.overlay-toggle-switch.is-on {
-  border-color: rgba(129, 140, 248, 0.55);
-  background: linear-gradient(175deg, rgba(62, 58, 160, 0.92) 0%, rgba(28, 32, 90, 0.98) 100%);
-  box-shadow: inset 0 1px 0 rgba(199, 210, 254, 0.12);
+  border-color: rgba(96, 165, 250, 0.58);
+  background: linear-gradient(175deg, rgba(37, 99, 235, 0.92) 0%, rgba(22, 58, 138, 0.98) 100%);
+  box-shadow: inset 0 1px 0 rgba(191, 219, 254, 0.16);
 }
 main[data-theme="ascending"] button.overlay-toggle-switch.is-on {
   border-color: rgba(200, 100, 120, 0.5);
@@ -269,9 +308,9 @@ main[data-theme="freestyle"] button.overlay-toggle-switch:focus-visible {
 
 /* SEED/WILL/GAZE pill: theme-aware active tint (avoid fixed purple) */
 main[data-theme="descending"] .seed-mode-pill.is-on {
-  color: #e0e7ff;
-  border-color: rgba(129, 140, 248, 0.55);
-  background: rgba(79, 70, 229, 0.28);
+  color: #dbeafe;
+  border-color: rgba(96, 165, 250, 0.58);
+  background: rgba(37, 99, 235, 0.32);
 }
 main[data-theme="ascending"] .seed-mode-pill.is-on {
   color: #ffe9ee;
@@ -279,9 +318,9 @@ main[data-theme="ascending"] .seed-mode-pill.is-on {
   background: rgba(120, 36, 56, 0.36);
 }
 main[data-theme="freestyle"] .seed-mode-pill.is-on {
-  color: #ddf7eb;
-  border-color: rgba(95, 180, 150, 0.52);
-  background: rgba(26, 95, 74, 0.34);
+  color: #ece7f7;
+  border-color: rgba(167, 139, 250, 0.44);
+  background: rgba(96, 64, 153, 0.3);
 }
 
 /* World panels: no panel fill, subtle outline */
@@ -405,12 +444,12 @@ main[data-theme="ascending"] .spread-toggle-knob {
 }
 
 main[data-theme="descending"] .spread-btn-go {
-  color: #e0e7ff;
-  background: rgba(129, 140, 248, 0.22);
-  box-shadow: 0 0 0 1px rgba(199, 210, 254, 0.28);
+  color: #dbeafe;
+  background: rgba(59, 130, 246, 0.26);
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.34);
 }
 main[data-theme="descending"] .spread-btn-go:hover:not(:disabled) {
-  background: rgba(165, 180, 252, 0.28);
+  background: rgba(96, 165, 250, 0.34);
 }
 
 main[data-theme="ascending"] .spread-btn-go {
@@ -490,12 +529,12 @@ main[data-theme="freestyle"] .spread-tile-back {
 }
 
 main[data-theme="descending"] .spread-float-next {
-  color: #eef2ff;
-  background: rgba(129, 140, 248, 0.32);
-  box-shadow: 0 0 0 1px rgba(199, 210, 254, 0.35);
+  color: #eff6ff;
+  background: rgba(59, 130, 246, 0.36);
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.38);
 }
 main[data-theme="descending"] .spread-float-next:hover:not(:disabled) {
-  background: rgba(165, 180, 252, 0.38);
+  background: rgba(96, 165, 250, 0.44);
 }
 
 main[data-theme="ascending"] .spread-float-next {
@@ -523,6 +562,98 @@ main[data-theme="ascending"] .spread-float-reset {
 }
 main[data-theme="ascending"] .spread-float-reset:hover {
   background: rgba(60, 20, 32, 0.88);
+}
+
+/* Unified theme system: same semantic slots across all modes */
+main[data-theme] .spread-title,
+main[data-theme] .spread-txt-strong,
+main[data-theme] .spread-triad {
+  color: var(--theme-ink-strong);
+}
+
+main[data-theme] .spread-hint {
+  color: var(--theme-ink-soft);
+}
+
+main[data-theme] .spread-txt-faint,
+main[data-theme] .spread-world-label {
+  color: var(--theme-ink-faint);
+}
+
+main[data-theme] .spread-inner {
+  border-color: var(--theme-line-soft);
+  background: transparent;
+  box-shadow: none;
+}
+
+main[data-theme] .spread-outer {
+  border-color: var(--theme-line);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 10px 30px color-mix(in srgb, var(--theme-accent) 55%, transparent);
+}
+
+main[data-theme] .spread-toggle {
+  background: var(--theme-panel);
+  box-shadow: 0 0 0 1px var(--theme-line);
+}
+
+main[data-theme] .spread-toggle:hover {
+  background: var(--theme-panel-hover);
+}
+
+main[data-theme] .spread-toggle-knob {
+  background: color-mix(in srgb, var(--theme-ink-strong) 92%, white);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+main[data-theme] .spread-mode-pill.is-active,
+main[data-theme] .seed-mode-pill.is-on,
+main[data-theme] .spread-btn-go,
+main[data-theme] .spread-float-next {
+  color: var(--theme-ink-strong);
+  background: var(--theme-accent);
+  box-shadow: 0 0 0 1px var(--theme-accent-line);
+}
+
+main[data-theme] .spread-btn-go:hover:not(:disabled),
+main[data-theme] .spread-float-next:hover:not(:disabled),
+main[data-theme] .spread-mode-pill.is-active:hover,
+main[data-theme] .seed-mode-pill.is-on:hover {
+  background: var(--theme-accent-hover);
+}
+
+main[data-theme] .spread-btn-ghost,
+main[data-theme] .spread-float-reset {
+  color: var(--theme-ink-soft);
+  background: var(--theme-panel);
+  box-shadow: 0 0 0 1px var(--theme-line);
+}
+
+main[data-theme] .spread-btn-ghost:hover,
+main[data-theme] .spread-float-reset:hover {
+  background: var(--theme-panel-hover);
+}
+
+main[data-theme] .spread-tile {
+  border-color: var(--theme-line);
+  background: color-mix(in srgb, var(--theme-panel) 78%, rgba(0, 0, 0, 0.2));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.045);
+}
+
+main[data-theme] .spread-tile-back {
+  border-color: var(--theme-accent-line);
+  background-color: color-mix(in srgb, var(--theme-panel) 86%, transparent);
+}
+
+main[data-theme] button.overlay-toggle-switch.is-on {
+  border-color: var(--theme-accent-line);
+  background: linear-gradient(175deg, var(--theme-switch-grad-a) 0%, var(--theme-switch-grad-b) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+main[data-theme] button.overlay-toggle-switch:focus-visible {
+  --tw-ring-color: var(--theme-ring);
 }
 
 @media (prefers-reduced-motion: reduce) {

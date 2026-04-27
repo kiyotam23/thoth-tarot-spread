@@ -1,6 +1,7 @@
 "use client";
 
 import katex from "katex";
+import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { CARD_INDEX } from "../constants/cards";
 import type { ThothPath } from "../constants/thothPaths";
@@ -1153,7 +1154,15 @@ export default function Page() {
       )}
       <div className={spread.shell}>
         <section className={spread.rail}>
-          <h1 className={spread.title}>ATHANOR</h1>
+          <div className="flex items-center justify-between gap-2">
+            <h1 className={spread.title}>ATHANOR</h1>
+            <Link
+              href="/manual"
+              className="spread-btn-ghost hidden rounded-md px-2.5 py-1 text-[10px] font-semibold tracking-[0.12em] lg:inline-flex"
+            >
+              MANUAL
+            </Link>
+          </div>
 
           {revealMode === "freestyle" ? (
             <div className={spread.controlGrid}>
@@ -1207,6 +1216,12 @@ export default function Page() {
             <div className="flex min-w-0 items-center gap-2">
               <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
               <HelpIconButton label="Global logic help" onClick={() => setIsGlobalHelpOpen(true)} />
+              <Link
+                href="/manual"
+                className="spread-btn-ghost ml-auto rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.12em] lg:hidden"
+              >
+                MANUAL
+              </Link>
             </div>
           </div>
 
@@ -1333,7 +1348,7 @@ export default function Page() {
                       : "border-white/25 bg-white/5 spread-txt-faint"
                   ].join(" ")}
                 >
-                  Fate
+                  FATE
                 </button>
                 <HelpIconButton label="Help: Fate option" onClick={() => setIsEchoHelpOpen(true)} />
                 {echoEnabled ? (
