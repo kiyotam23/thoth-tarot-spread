@@ -267,6 +267,23 @@ main[data-theme="freestyle"] button.overlay-toggle-switch:focus-visible {
   --tw-ring-color: rgba(150, 210, 190, 0.5);
 }
 
+/* SEED/WILL/GAZE pill: theme-aware active tint (avoid fixed purple) */
+main[data-theme="descending"] .seed-mode-pill.is-on {
+  color: #e0e7ff;
+  border-color: rgba(129, 140, 248, 0.55);
+  background: rgba(79, 70, 229, 0.28);
+}
+main[data-theme="ascending"] .seed-mode-pill.is-on {
+  color: #ffe9ee;
+  border-color: rgba(210, 95, 120, 0.56);
+  background: rgba(120, 36, 56, 0.36);
+}
+main[data-theme="freestyle"] .seed-mode-pill.is-on {
+  color: #ddf7eb;
+  border-color: rgba(95, 180, 150, 0.52);
+  background: rgba(26, 95, 74, 0.34);
+}
+
 /* World panels: no panel fill, subtle outline */
 main[data-theme="descending"] .spread-inner {
   border-color: rgba(165, 180, 252, 0.11);

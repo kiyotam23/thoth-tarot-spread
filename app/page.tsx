@@ -40,7 +40,7 @@ const spread = {
   floatReset:
     "spread-float-reset min-h-[52px] min-w-[9rem] rounded-full px-5 py-3 text-sm font-semibold supports-[backdrop-filter]:backdrop-blur-sm transition",
   controlGrid: "mt-3 grid w-full grid-cols-2 gap-2",
-  modePillRow: "mt-1.5 flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:gap-3",
+  modePillRow: "mt-1.5 grid w-full min-w-0 grid-cols-3 gap-2 sm:gap-3",
   layerExecutionFixed:
     "pointer-events-auto fixed right-3 top-3 z-30 w-auto min-w-0 text-right sm:right-5 sm:top-5",
   sephiroticPanel:
@@ -620,6 +620,12 @@ export default function Page() {
   const [activeHelpKey, setActiveHelpKey] = useState<Layer["key"] | null>(null);
   const [isGlobalHelpOpen, setIsGlobalHelpOpen] = useState(false);
   const [isOverlayHelpOpen, setIsOverlayHelpOpen] = useState(false);
+  const [seedHelpTarget, setSeedHelpTarget] = useState<"will" | "gaze" | null>(null);
+  const [isEchoHelpOpen, setIsEchoHelpOpen] = useState(false);
+  const [manualSeedEnabled, setManualSeedEnabled] = useState(false);
+  const [manualSeedCardId, setManualSeedCardId] = useState<string | null>(null);
+  const [echoEnabled, setEchoEnabled] = useState(false);
+  const [echoCardId, setEchoCardId] = useState<string | null>(null);
   const [showTreeOfLife, setShowTreeOfLife] = useState(false);
   const [treeLayout, setTreeLayout] = useState<TreeLayout | null>(null);
   const [selectedThothPath, setSelectedThothPath] = useState<ThothPath | null>(null);
@@ -628,6 +634,7 @@ export default function Page() {
   const rightPanelRef = useRef<HTMLDivElement | null>(null);
   const treeLayoutRootRef = useRef<HTMLDivElement | null>(null);
   const sephirahSlotRef = useRef<(HTMLDivElement | null)[]>(Array.from({ length: 10 }, () => null));
+  const sequentialAdvanceLockRef = useRef(false);
   const cardBackImage = "/images/card_back.jpg";
 
   const layerRef = useMemo(
@@ -646,6 +653,16 @@ export default function Page() {
   const revealOrder = useMemo(
     () => (revealMode === "descending" ? REVEAL_ATZILUTH_TO_ASSIAH : REVEAL_ASSIAH_TO_ATZILUTH),
     [revealMode]
+  );
+  const effectiveRevealOrder = revealOrder;
+  const seedCandidateCards = useMemo(() => {
+    if (revealMode === "ascending") return FOCUS;
+    if (revealMode === "descending") return ACES;
+    return [] as Card[];
+  }, [revealMode]);
+  const selectedSeedCard = useMemo(
+    () => seedCandidateCards.find((card) => card.id === manualSeedCardId) ?? null,
+    [seedCandidateCards, manualSeedCardId]
   );
 
   const selectedCard = selectedCardId ? CARD_INDEX[selectedCardId] : null;
@@ -682,8 +699,8 @@ export default function Page() {
     if (revealMode === "freestyle") {
       return new Set<number>();
     }
-    return new Set(revealOrder.slice(0, step));
-  }, [revealMode, revealOrder, step]);
+    return new Set(effectiveRevealOrder.slice(0, step));
+  }, [revealMode, effectiveRevealOrder, step]);
 
   const dealFreestyle = useCallback(() => {
     const d = dealAllLayers();
@@ -702,12 +719,18 @@ export default function Page() {
       setActiveHelpKey(null);
       setRevealMode(m);
       if (m === "freestyle") {
+        setManualSeedEnabled(false);
+        setManualSeedCardId(null);
+        setEchoCardId(null);
         const d = dealAllLayers();
         preloadImageUrls(Object.values(d).flatMap((c) => c.map((x) => x.image)));
         setDrawn(d);
         setFreestyleFaceUp({});
         setFreestyleOrderLog([]);
       } else {
+        setEchoEnabled(false);
+        setEchoCardId(null);
+        setManualSeedCardId(null);
         setDrawn({});
         setFreestyleFaceUp({});
         setFreestyleOrderLog([]);
@@ -720,13 +743,16 @@ export default function Page() {
   const nextStep = useCallback(() => {
     if (!isSequential) return;
     if (step >= LAYERS.length) return;
-    const layerIndex = revealOrder[step];
+    const layerIndex = effectiveRevealOrder[step];
     const layer = LAYERS[layerIndex];
-    const picked = drawUnique(layer.pool, layer.drawCount);
+    const picked =
+      step === 0 && manualSeedEnabled && selectedSeedCard
+        ? [selectedSeedCard]
+        : drawUnique(layer.pool, layer.drawCount);
     preloadImageUrls(picked.map((c) => c.image));
     setDrawn((prev) => ({ ...prev, [layer.key]: picked }));
     setStep((prev) => prev + 1);
-  }, [isSequential, revealOrder, step]);
+  }, [isSequential, effectiveRevealOrder, step, manualSeedEnabled, selectedSeedCard]);
 
   const reset = useCallback(() => {
     if (revealMode === "freestyle") {
@@ -762,10 +788,68 @@ export default function Page() {
     });
   }, []);
 
+  const jumpToNextAndReveal = useCallback(() => {
+    if (!isSequential) return;
+    if (step >= LAYERS.length) return;
+    if (sequentialAdvanceLockRef.current) return;
+    sequentialAdvanceLockRef.current = true;
+    const nextLayerIndex = effectiveRevealOrder[step];
+    scrollToLayer(nextLayerIndex);
+    window.setTimeout(() => {
+      nextStep();
+      // prevent accidental multi-draw from quick repeated taps
+      window.setTimeout(() => {
+        sequentialAdvanceLockRef.current = false;
+      }, 220);
+    }, 80);
+  }, [isSequential, step, effectiveRevealOrder, scrollToLayer, nextStep]);
+
+  useEffect(() => {
+    if (revealMode !== "freestyle" || !echoEnabled) return;
+    if (!echoCardId) return;
+    const selected = DESTINY.find((card) => card.id === echoCardId);
+    if (!selected) return;
+    preloadImageUrls([selected.image]);
+    setFreestyleFaceUp((prev) => ({ ...prev, destiny__0: true }));
+    setDrawn((prev) => {
+      const current = prev.destiny;
+      if (current?.length === 1 && current[0]?.id === selected.id) return prev;
+      return { ...prev, destiny: [selected] };
+    });
+    setFreestyleOrderLog((prev) => {
+      const idx = prev.findIndex((entry) => entry.slotKey === "destiny__0");
+      if (idx < 0) {
+        return [
+          ...prev,
+          { slotKey: "destiny__0", cardId: selected.id, name: selected.name, op: LAYER_OPERATOR_LABELS[3], sephirah: 6 }
+        ];
+      }
+      const next = [...prev];
+      next[idx] = { ...next[idx], cardId: selected.id, name: selected.name };
+      return next;
+    });
+    requestAnimationFrame(() => {
+      scrollToLayer(3); // Tiphareth / Destiny layer
+    });
+  }, [revealMode, echoEnabled, echoCardId, scrollToLayer]);
+
+  useEffect(() => {
+    if (!isSequential || !manualSeedEnabled || !selectedSeedCard) return;
+    const seedLayerIndex = revealOrder[0];
+    const seedLayer = LAYERS[seedLayerIndex];
+    preloadImageUrls([selectedSeedCard.image]);
+    setDrawn((prev) => {
+      const current = prev[seedLayer.key];
+      if (current?.length === 1 && current[0]?.id === selectedSeedCard.id) return prev;
+      return { ...prev, [seedLayer.key]: [selectedSeedCard] };
+    });
+    setStep((prev) => (prev < 1 ? 1 : prev));
+  }, [isSequential, manualSeedEnabled, selectedSeedCard, revealOrder]);
+
   useEffect(() => {
     if (revealMode === "freestyle" || !isSequential) return;
     if (step === 0) return;
-    const layerIndex = revealOrder[step - 1];
+    const layerIndex = effectiveRevealOrder[step - 1];
     const openedLayer = LAYERS[layerIndex];
     const target = layerRefs.current[openedLayer.key];
     if (!target) return;
@@ -774,7 +858,7 @@ export default function Page() {
       behavior: "smooth",
       block: "center"
     });
-  }, [step, revealOrder, revealMode, isSequential]);
+  }, [step, effectiveRevealOrder, revealMode, isSequential]);
 
   useEffect(() => {
     // Keep only the shared card-back warm to avoid eager loading every card asset.
@@ -858,7 +942,7 @@ export default function Page() {
         }
 
         const opened = (drawn[layer.key]?.length ?? 0) > 0;
-        const nextLayerIndex = step < LAYERS.length ? revealOrder[step] : -1;
+        const nextLayerIndex = step < LAYERS.length ? effectiveRevealOrder[step] : -1;
         const isNextLayer = layerIdx === nextLayerIndex;
 
         if (opened) {
@@ -870,7 +954,13 @@ export default function Page() {
                 <RevealedCardButton
                   card={card}
                   cardBackSrc={cardBackImage}
-                  onOpen={() => setSelectedCardId(card.id)}
+                  onOpen={() => {
+                    if (isSequential && step < LAYERS.length) {
+                      jumpToNextAndReveal();
+                      return;
+                    }
+                    setSelectedCardId(card.id);
+                  }}
                 />
               </div>
             );
@@ -889,7 +979,7 @@ export default function Page() {
               >
                 <button
                   type="button"
-                  onClick={nextStep}
+                  onClick={jumpToNextAndReveal}
                   aria-label={`Draw — same as control (${step + 1}/6, ${op})`}
                   className="block h-full w-full min-h-0 overflow-hidden rounded-lg border-0 bg-transparent p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
                 >
@@ -910,22 +1000,39 @@ export default function Page() {
             <div
               key={placeholderKey}
               ref={s > 0 ? assignSephirahNode(s) : undefined}
-              aria-label="card back (locked until previous draws)"
               className="spread-tile-back spread-card-back-shell border border-dashed"
             >
-              <img
-                src={cardBackImage}
-                alt=""
-                className="spread-card-back-img"
-                loading="lazy"
-                decoding="async"
-              />
-              <span className="sr-only">Card back</span>
+              <button
+                type="button"
+                onClick={jumpToNextAndReveal}
+                aria-label="Card back (tap to jump to next draw)"
+                className="block h-full w-full min-h-0 overflow-hidden rounded-lg border-0 bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/70"
+              >
+                <img
+                  src={cardBackImage}
+                  alt=""
+                  className="spread-card-back-img"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span className="sr-only">Card back</span>
+              </button>
             </div>
           );
         });
       }),
-    [drawn, cardBackImage, revealMode, freestyleFaceUp, revealFreestyleSlot, nextStep, step, revealOrder, assignSephirahNode]
+    [
+      drawn,
+      cardBackImage,
+      revealMode,
+      freestyleFaceUp,
+      revealFreestyleSlot,
+      step,
+      effectiveRevealOrder,
+      assignSephirahNode,
+      isSequential,
+      jumpToNextAndReveal
+    ]
   );
   const yetzirahCards = cardsByLayer[4] ?? [];
 
@@ -946,7 +1053,7 @@ export default function Page() {
       cancelAnimationFrame(a);
       ro.disconnect();
     };
-  }, [showTreeOfLife, recomputeTreeLayout, cardsByLayer, drawn, revealMode, freestyleFaceUp, step, revealOrder]);
+  }, [showTreeOfLife, recomputeTreeLayout, cardsByLayer, drawn, revealMode, freestyleFaceUp, step, effectiveRevealOrder]);
 
   function renderTriadLabel(layerIndex: number, className: string) {
     const layer = LAYERS[layerIndex];
@@ -1041,38 +1148,151 @@ export default function Page() {
               <p className="spread-hint text-xs font-medium tracking-wide">Reveal order</p>
               <HelpIconButton label="Global logic help" onClick={() => setIsGlobalHelpOpen(true)} />
             </div>
-            <div className={spread.modePillRow} role="group" aria-label="Reveal order mode">
-              <button
-                type="button"
-                onClick={() => selectRevealMode("ascending")}
-                className={`spread-mode-pill min-h-10 ${revealMode === "ascending" ? "is-active" : ""}`}
-              >
-                <span className={revealMode === "ascending" ? "spread-txt-strong" : "spread-txt-faint"}>Ascending</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => selectRevealMode("descending")}
-                className={`spread-mode-pill min-h-10 ${revealMode === "descending" ? "is-active" : ""}`}
-              >
-                <span className={revealMode === "descending" ? "spread-txt-strong" : "spread-txt-faint"}>Descending</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => selectRevealMode("freestyle")}
-                className={`spread-mode-pill min-h-10 ${revealMode === "freestyle" ? "is-active" : ""}`}
-              >
-                <span
-                  className={[
-                    revealMode === "freestyle" ? "spread-txt-strong" : "spread-txt-faint",
-                    "text-[0.6rem] font-semibold tracking-[0.14em] sm:text-[0.7rem] sm:tracking-[0.16em]"
-                  ].join(" ")}
-                >
-                  UNBOUND
-                </span>
-              </button>
-            </div>
           </div>
 
+          <div className={spread.modePillRow} role="group" aria-label="Reveal order mode">
+            <button
+              type="button"
+              onClick={() => selectRevealMode("ascending")}
+              className={`spread-mode-pill min-h-10 ${revealMode === "ascending" ? "is-active" : ""}`}
+            >
+              <span className={revealMode === "ascending" ? "spread-txt-strong" : "spread-txt-faint"}>Ascending</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => selectRevealMode("descending")}
+              className={`spread-mode-pill min-h-10 ${revealMode === "descending" ? "is-active" : ""}`}
+            >
+              <span className={revealMode === "descending" ? "spread-txt-strong" : "spread-txt-faint"}>Descending</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => selectRevealMode("freestyle")}
+              className={`spread-mode-pill min-h-10 ${revealMode === "freestyle" ? "is-active" : ""}`}
+            >
+              <span
+                className={[
+                  revealMode === "freestyle" ? "spread-txt-strong" : "spread-txt-faint",
+                  "text-[0.6rem] font-semibold tracking-[0.14em] sm:text-[0.7rem] sm:tracking-[0.16em]"
+                ].join(" ")}
+              >
+                Cross
+              </span>
+            </button>
+          </div>
+          {isSequential ? (
+            <div className="mt-2 w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2">
+              <div className="flex w-full min-w-0 items-center gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={manualSeedEnabled}
+                  aria-label={manualSeedEnabled ? "Disable SEED first pick" : "Enable SEED first pick"}
+                  disabled={step > 1}
+                  onClick={() => {
+                    setManualSeedEnabled((v) => {
+                      const next = !v;
+                      if (!next) {
+                        setManualSeedCardId(null);
+                        if (step <= 1) {
+                          setStep(0);
+                          setDrawn({});
+                        }
+                      }
+                      return next;
+                    });
+                  }}
+                  className={[
+                    "seed-mode-pill inline-flex min-h-7 items-center rounded-full border px-2.5 text-[10px] font-semibold tracking-[0.16em] transition",
+                    step > 1
+                      ? "border-white/20 bg-white/5 spread-txt-faint opacity-65 cursor-not-allowed"
+                      : manualSeedEnabled
+                      ? "is-on"
+                      : "border-white/25 bg-white/5 spread-txt-faint"
+                  ].join(" ")}
+                >
+                  {revealMode === "descending" ? "WILL" : "GAZE"}
+                </button>
+                <HelpIconButton
+                  label={revealMode === "descending" ? "Help: WILL seed option" : "Help: GAZE seed option"}
+                  onClick={() => setSeedHelpTarget(revealMode === "descending" ? "will" : "gaze")}
+                />
+                {manualSeedEnabled ? (
+                  <>
+                    <select
+                      className="min-w-0 flex-1 rounded-md border border-white/20 bg-black/35 px-2 py-1 text-xs text-slate-100/95 outline-none focus:border-indigo-300/60"
+                      value={manualSeedCardId ?? ""}
+                      onChange={(e) => setManualSeedCardId(e.target.value || null)}
+                      disabled={step > 1}
+                      aria-label="Choose seed card"
+                    >
+                      <option value="" disabled>
+                        Select one...
+                      </option>
+                      {seedCandidateCards.map((card) => {
+                        const seedLabel =
+                          revealMode === "descending" ? card.name.replace(/^Ace of\s+/i, "") : card.name;
+                        return (
+                          <option key={`seed-card-${card.id}`} value={card.id}>
+                            {seedLabel}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </>
+                ) : (
+                  <p className="spread-hint text-[10px] leading-tight opacity-90">
+                    {revealMode === "descending" ? "OPTION SELECT WILL" : "OPTION SELECT GAZE"}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : null}
+          {revealMode === "freestyle" ? (
+            <div className="mt-2 w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2">
+              <div className="flex w-full min-w-0 items-center gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={echoEnabled}
+                  aria-label={echoEnabled ? "Disable ECHO option" : "Enable ECHO option"}
+                  onClick={() => {
+                    setEchoEnabled((v) => {
+                      const next = !v;
+                      if (!next) setEchoCardId(null);
+                      return next;
+                    });
+                  }}
+                  className={[
+                    "seed-mode-pill inline-flex min-h-7 items-center rounded-full border px-2.5 text-[10px] font-semibold tracking-[0.16em] transition",
+                    echoEnabled ? "is-on" : "border-white/25 bg-white/5 spread-txt-faint"
+                  ].join(" ")}
+                >
+                  ECHO
+                </button>
+                <HelpIconButton label="Help: ECHO seed option" onClick={() => setIsEchoHelpOpen(true)} />
+                {echoEnabled ? (
+                  <select
+                    className="min-w-0 flex-1 rounded-md border border-white/20 bg-black/35 px-2 py-1 text-xs text-slate-100/95 outline-none focus:border-indigo-300/60"
+                    value={echoCardId ?? ""}
+                    onChange={(e) => setEchoCardId(e.target.value || null)}
+                    aria-label="Choose ECHO zodiac major"
+                  >
+                    <option value="" disabled>
+                      Select one...
+                    </option>
+                    {DESTINY.map((card) => (
+                      <option key={`echo-card-${card.id}`} value={card.id}>
+                        {card.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="spread-hint text-[10px] leading-tight opacity-90">OPTION SELECT ECHO</p>
+                )}
+              </div>
+            </div>
+          ) : null}
           {revealMode === "freestyle" ? (
             <div className="mt-3 w-full">
               <button type="button" onClick={dealFreestyle} className={`${spread.drawBtn} w-full`}>
@@ -1090,42 +1310,44 @@ export default function Page() {
             </div>
           )}
 
-          <div className="mt-3 flex w-full min-w-0 items-center justify-start gap-1.5 sm:gap-2">
-            <span
-              className="text-[9px] font-semibold leading-none tracking-[0.2em] text-slate-200/90 sm:text-[10px]"
-              id="tree-overlay-label"
-            >
-              OVERLAY
-            </span>
-            <HelpIconButton
-              label="Help: Sephirotic overlay"
-              onClick={() => setIsOverlayHelpOpen(true)}
-            />
-            <button
-              type="button"
-              id="tree-overlay-switch"
-              role="switch"
-              aria-checked={showTreeOfLife}
-              aria-labelledby="tree-overlay-label"
-              title={showTreeOfLife ? "生命の樹オーバーレイ：オン" : "生命の樹オーバーレイ：オフ"}
-              onClick={() => setShowTreeOfLife((v) => !v)}
-              className={[
-                "overlay-toggle-switch relative h-5 w-9 shrink-0 rounded-full border transition-colors",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950/80",
-                showTreeOfLife ? "is-on" : null
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
+          <div className="mt-2 w-full rounded-lg border border-white/10 bg-black/25 px-2.5 py-2">
+            <div className="flex w-full min-w-0 items-center justify-start gap-1.5 sm:gap-2">
               <span
-                aria-hidden
-                className={[
-                  "pointer-events-none absolute top-0.5 left-0.5 block h-4 w-4 rounded-full bg-white shadow",
-                  "transition-transform duration-200 ease-out will-change-transform",
-                  showTreeOfLife ? "translate-x-4" : "translate-x-0"
-                ].join(" ")}
+                className="text-[9px] font-semibold leading-none tracking-[0.2em] text-slate-200/90 sm:text-[10px]"
+                id="tree-overlay-label"
+              >
+                OVERLAY
+              </span>
+              <HelpIconButton
+                label="Help: Sephirotic overlay"
+                onClick={() => setIsOverlayHelpOpen(true)}
               />
-            </button>
+              <button
+                type="button"
+                id="tree-overlay-switch"
+                role="switch"
+                aria-checked={showTreeOfLife}
+                aria-labelledby="tree-overlay-label"
+                title={showTreeOfLife ? "生命の樹オーバーレイ：オン" : "生命の樹オーバーレイ：オフ"}
+                onClick={() => setShowTreeOfLife((v) => !v)}
+                className={[
+                  "overlay-toggle-switch relative h-5 w-9 shrink-0 rounded-full border transition-colors",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950/80",
+                  showTreeOfLife ? "is-on" : null
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <span
+                  aria-hidden
+                  className={[
+                    "pointer-events-none absolute top-0.5 left-0.5 block h-4 w-4 rounded-full bg-white shadow",
+                    "transition-transform duration-200 ease-out will-change-transform",
+                    showTreeOfLife ? "translate-x-4" : "translate-x-0"
+                  ].join(" ")}
+                />
+              </button>
+            </div>
           </div>
         </section>
         <section ref={rightPanelRef} className={spread.canvas}>
@@ -1263,7 +1485,7 @@ export default function Page() {
               narrative is integrated back toward essence.
             </p>
             <p>
-              <strong className="spread-triad font-semibold">UNBOUND</strong> bypasses the sequential flow of the Tree,
+              <strong className="spread-triad font-semibold">Cross</strong> bypasses the sequential flow of the Tree,
               allowing for non-linear observation. Use this to sample specific nodes directly through your own will.
             </p>
           </div>
@@ -1335,6 +1557,65 @@ export default function Page() {
                 "\\mathrm{Result} = T_{\\mathrm{path}}(\\mathrm{Card}_a,\\, \\mathrm{Card}_b)"
               }
             />
+          </div>
+        </SpreadDialog>
+      ) : null}
+
+      {seedHelpTarget ? (
+        <SpreadDialog
+          aria-label={seedHelpTarget === "will" ? "WILL seed help" : "GAZE seed help"}
+          z="help"
+          maxWidth="md"
+          onClose={() => setSeedHelpTarget(null)}
+        >
+          <div className={spread.modalHeader}>
+            <h3 className="spread-triad text-base font-semibold">
+              {seedHelpTarget === "will" ? "WILL Seed Option" : "GAZE Seed Option"}
+            </h3>
+            <ModalCloseButton onClick={() => setSeedHelpTarget(null)} />
+          </div>
+          <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
+            {seedHelpTarget === "will" ? (
+              <>
+                <p>
+                  In <strong className="spread-triad font-semibold">Descending</strong> mode, this protocol allows you to
+                  manually define the origin of the causal chain.
+                </p>
+                <p>
+                  Choose a suit to set the Kether (1) Seed from the four Aces. This selection establishes the primary
+                  element of the spread. The first position updates immediately, and subsequent cards will be deployed
+                  following the sequential Emanation flow toward Malkuth.
+                </p>
+              </>
+            ) : (
+              <>
+                <p>
+                  In <strong className="spread-triad font-semibold">Ascending</strong> mode, this protocol allows you to
+                  lock the observation point on a specific cosmic manifestation within Malkuth (10).
+                </p>
+                <p>
+                  Select a Planetary Major from the dropdown to define the initial &quot;Gaze.&quot; This fixes the
+                  physical landing point of the spread. The first card updates immediately, and the deployment then
+                  proceeds in the reverse Integration flow toward the source.
+                </p>
+              </>
+            )}
+          </div>
+        </SpreadDialog>
+      ) : null}
+
+      {isEchoHelpOpen ? (
+        <SpreadDialog aria-label="ECHO seed help" z="help" maxWidth="md" onClose={() => setIsEchoHelpOpen(false)}>
+          <div className={spread.modalHeader}>
+            <h3 className="spread-triad text-base font-semibold">ECHO Seed Option</h3>
+            <ModalCloseButton onClick={() => setIsEchoHelpOpen(false)} />
+          </div>
+          <div className="spread-hint mt-3 space-y-2 text-sm leading-relaxed">
+            <p>
+              Set the harmonic center. By fixing a Zodiacal Major at Tiphareth, the system resonates your core identity
+              through the entire Tree, revealing how your inner nature echoes in both the Divine Will and the Physical
+              Reality.
+            </p>
           </div>
         </SpreadDialog>
       ) : null}
