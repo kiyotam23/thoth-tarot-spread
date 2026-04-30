@@ -3,7 +3,7 @@
 import katex from "katex";
 import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { CARD_INDEX } from "../constants/cards";
+import { ALL_CARDS, CARD_INDEX } from "../constants/cards";
 import type { ThothPath } from "../constants/thothPaths";
 import { TreeOfLifeLines, TreePathHitLayer, type TreeLayout } from "./TreeOfLifeBackground";
 
@@ -368,6 +368,35 @@ function drawUnique(pool: Card[], count: number): Card[] {
 
 const TOTAL_SPREAD_CARDS = LAYERS.reduce((acc, l) => acc + l.drawCount, 0);
 
+type SelectedModalPick = {
+  cardId: string;
+  sephirah: number;
+};
+
+type SephirahFlankEcho = {
+  leftId: string;
+  rightId: string;
+};
+
+function collectSpreadCardIds(drawn: Record<string, Card[]>): Set<string> {
+  const ids = new Set<string>();
+  for (const arr of Object.values(drawn)) {
+    for (const c of arr) ids.add(c.id);
+  }
+  return ids;
+}
+
+function pickTwoDistinctIds(pool: string[]): [string, string] | null {
+  if (pool.length < 2) return null;
+  const copy = [...pool];
+  const i = Math.floor(Math.random() * copy.length);
+  const left = copy.splice(i, 1)[0];
+  const j = Math.floor(Math.random() * copy.length);
+  const right = copy[j];
+  if (!left || !right || left === right) return null;
+  return [left, right];
+}
+
 function dealAllLayers(): Record<string, Card[]> {
   const next: Record<string, Card[]> = {};
   for (const layer of LAYERS) {
@@ -632,7 +661,9 @@ export default function Page() {
   const [showTreeOfLife, setShowTreeOfLife] = useState(false);
   const [treeLayout, setTreeLayout] = useState<TreeLayout | null>(null);
   const [selectedThothPath, setSelectedThothPath] = useState<ThothPath | null>(null);
-  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [selectedModalPick, setSelectedModalPick] = useState<SelectedModalPick | null>(null);
+  /** Per-Sephirah (1–10), at most one L/R pair from the leftover deck once drawn */
+  const [sephFlankEchoes, setSephFlankEchoes] = useState<Record<number, SephirahFlankEcho>>({});
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const rightPanelRef = useRef<HTMLDivElement | null>(null);
   const treeLayoutRootRef = useRef<HTMLDivElement | null>(null);
@@ -668,7 +699,7 @@ export default function Page() {
     [seedCandidateCards, manualSeedCardId]
   );
 
-  const selectedCard = selectedCardId ? CARD_INDEX[selectedCardId] : null;
+  const selectedCard = selectedModalPick ? CARD_INDEX[selectedModalPick.cardId] : null;
   const activeLayer = activeHelpKey ? LAYERS_BY_KEY[activeHelpKey] : null;
   const activeLayerHelp = activeHelpKey ? LAYER_HELP[activeHelpKey] : null;
   const isSelectedPlanetLayer = selectedCard?.layer === 6;
@@ -691,6 +722,10 @@ export default function Page() {
       selectedCard.rank === String(selectedCard.number)
     );
 
+  const modalSephirah = selectedModalPick?.sephirah ?? 0;
+  const modalFlankEcho =
+    modalSephirah >= 1 && modalSephirah <= 10 ? sephFlankEchoes[modalSephirah] : undefined;
+
   const isSequential = revealMode === "ascending" || revealMode === "descending";
   const freestyleRevealedCount = useMemo(
     () => Object.values(freestyleFaceUp).filter(Boolean).length,
@@ -702,6 +737,29 @@ export default function Page() {
     !(echoSeedApplied && freestyleRevealedCount === 1);
   const seedLocked = isSequential && step > 0 && (!manualSeedEnabled || step > 1);
   const completed = isSequential ? step === LAYERS.length : revealMode === "freestyle" && freestyleRevealedCount >= TOTAL_SPREAD_CARDS;
+
+  const drawSephirahFlankEcho = useCallback(
+    (sephirah: number) => {
+      if (!completed) return;
+      if (sephirah < 1 || sephirah > 10) return;
+      setSephFlankEchoes((prev) => {
+        if (prev[sephirah]) return prev;
+        const used = new Set<string>();
+        for (const v of Object.values(prev)) {
+          used.add(v.leftId);
+          used.add(v.rightId);
+        }
+        const spreadIds = collectSpreadCardIds(drawn);
+        const pool = ALL_CARDS.map((c) => c.id).filter((id) => !spreadIds.has(id) && !used.has(id));
+        const pair = pickTwoDistinctIds(pool);
+        if (!pair) return prev;
+        const [leftId, rightId] = pair;
+        preloadImageUrls([CARD_INDEX[leftId].image, CARD_INDEX[rightId].image]);
+        return { ...prev, [sephirah]: { leftId, rightId } };
+      });
+    },
+    [completed, drawn]
+  );
 
   const litOperatorIndexSet = useMemo(() => {
     if (revealMode === "freestyle") {
@@ -718,12 +776,14 @@ export default function Page() {
     setFreestyleOrderLog([]);
     setEchoSeedApplied(false);
     setStep(0);
-    setSelectedCardId(null);
+    setSelectedModalPick(null);
+    setSephFlankEchoes({});
   }, []);
 
   const selectRevealMode = useCallback(
     (m: RevealMode) => {
-      setSelectedCardId(null);
+      setSelectedModalPick(null);
+      setSephFlankEchoes({});
       setStep(0);
       setActiveHelpKey(null);
       setRevealMode(m);
@@ -772,7 +832,8 @@ export default function Page() {
       setDrawn({});
       setStep(0);
     }
-    setSelectedCardId(null);
+    setSelectedModalPick(null);
+    setSephFlankEchoes({});
     window.scrollTo({ top: 0, behavior: "smooth" });
     rightPanelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [revealMode, dealFreestyle]);
@@ -922,7 +983,7 @@ export default function Page() {
                   <RevealedCardButton
                     card={card}
                     cardBackSrc={cardBackImage}
-                    onOpen={() => setSelectedCardId(card.id)}
+                    onOpen={() => setSelectedModalPick({ cardId: card.id, sephirah: s })}
                   />
                 </div>
               );
@@ -967,13 +1028,7 @@ export default function Page() {
                 <RevealedCardButton
                   card={card}
                   cardBackSrc={cardBackImage}
-                  onOpen={() => {
-                    if (isSequential && step < LAYERS.length) {
-                      jumpToNextAndReveal();
-                      return;
-                    }
-                    setSelectedCardId(card.id);
-                  }}
+                  onOpen={() => setSelectedModalPick({ cardId: card.id, sephirah: s })}
                 />
               </div>
             );
@@ -1043,7 +1098,6 @@ export default function Page() {
       step,
       effectiveRevealOrder,
       assignSephirahNode,
-      isSequential,
       jumpToNextAndReveal
     ]
   );
@@ -1728,19 +1782,92 @@ export default function Page() {
           aria-label="Card details"
           z="card"
           maxWidth="wide"
-          onClose={() => setSelectedCardId(null)}
+          onClose={() => setSelectedModalPick(null)}
         >
           <div className="flex justify-end">
-            <ModalCloseButton onClick={() => setSelectedCardId(null)} />
+            <ModalCloseButton onClick={() => setSelectedModalPick(null)} />
           </div>
-          <div className="mt-3 grid gap-4 md:grid-cols-[auto_1fr]">
-            <img
-              src={selectedCard.image}
-              alt={selectedCard.name}
-              className="spread-card-modal-art"
-              decoding="async"
-            />
-            <div className="spread-hint text-sm leading-relaxed">
+          <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:gap-6">
+            <div className="flex min-w-0 flex-1 flex-col gap-4">
+              {!modalFlankEcho ? (
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src={selectedCard.image}
+                    alt={selectedCard.name}
+                    className="spread-card-modal-art max-w-[min(100%,20rem)]"
+                    decoding="async"
+                  />
+                  <p className="spread-hint text-center text-xs opacity-80">
+                    Sephirah {modalSephirah} · Spread position
+                  </p>
+                  {completed ? (
+                    <div className="flex w-full max-w-md flex-col items-center gap-2">
+                      <button
+                        type="button"
+                        className="spread-btn-go rounded-full px-4 py-2 text-xs font-semibold tracking-wide"
+                        onClick={() => drawSephirahFlankEcho(modalSephirah)}
+                      >
+                        Draw Sephirah echoes (L / R)
+                      </button>
+                      <p className="text-center text-[11px] opacity-70">
+                        Two random cards from the remaining deck (spread cards excluded). Each Sephirah keeps one L/R pair.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="max-w-md text-center text-[11px] opacity-70">
+                      Unlocks after all {TOTAL_SPREAD_CARDS} spread cards are revealed — then you can add echo cards for every Sephirah.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full max-w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+                  <div className="mx-auto grid min-w-[18rem] grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)] items-start gap-x-3 gap-y-2 px-1 sm:min-w-0 sm:gap-x-4">
+                    <div className="isolate flex min-w-0 flex-col items-center gap-1.5 overflow-hidden px-0.5">
+                      <span className="spread-hint text-[10px] font-medium tracking-[0.12em] opacity-85">ECHO L</span>
+                      <div className="w-full overflow-hidden rounded-lg">
+                        <img
+                          src={CARD_INDEX[modalFlankEcho.leftId].image}
+                          alt=""
+                          className="aspect-[2/3] h-auto w-full max-w-full rounded-lg border border-white/15 object-cover object-center"
+                          decoding="async"
+                        />
+                      </div>
+                      <p className="max-w-full text-center text-[9px] leading-snug opacity-90 sm:text-[10px]">
+                        {CARD_INDEX[modalFlankEcho.leftId].name}
+                      </p>
+                    </div>
+                    <div className="isolate flex min-w-0 flex-col items-center gap-2 overflow-hidden px-0.5">
+                      <span className="spread-hint text-[10px] font-medium tracking-[0.12em] opacity-85">SPREAD</span>
+                      {/* triad layout: avoid spread-card-modal-art — it fixes 12×16.8rem and overflows narrow columns */}
+                      <div className="relative w-full max-w-[9rem] overflow-hidden rounded-lg sm:max-w-[11rem]">
+                        <img
+                          src={selectedCard.image}
+                          alt={selectedCard.name}
+                          className="aspect-[2/3] h-auto w-full max-w-full rounded-lg border border-white/15 object-cover object-center"
+                          decoding="async"
+                        />
+                      </div>
+                      <p className="text-center text-[11px] opacity-80">Sephirah {modalSephirah}</p>
+                    </div>
+                    <div className="isolate flex min-w-0 flex-col items-center gap-1.5 overflow-hidden px-0.5">
+                      <span className="spread-hint text-[10px] font-medium tracking-[0.12em] opacity-85">ECHO R</span>
+                      <div className="w-full overflow-hidden rounded-lg">
+                        <img
+                          src={CARD_INDEX[modalFlankEcho.rightId].image}
+                          alt=""
+                          className="aspect-[2/3] h-auto w-full max-w-full rounded-lg border border-white/15 object-cover object-center"
+                          decoding="async"
+                        />
+                      </div>
+                      <p className="max-w-full text-center text-[9px] leading-snug opacity-90 sm:text-[10px]">
+                        {CARD_INDEX[modalFlankEcho.rightId].name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="spread-hint min-w-0 flex-1 text-sm leading-relaxed lg:max-w-md">
               <h3 className="spread-triad text-base font-semibold">{selectedCardModalTitle}</h3>
               <div className="mt-2 grid grid-cols-1 gap-x-5 gap-y-1.5 md:grid-cols-2">
                 {selectedCard.suit ? <p className="min-w-0 leading-snug">Suit: {selectedCard.suit}</p> : null}
