@@ -243,6 +243,18 @@ const OVERLAY_HELP_SECTIONS = [
   "Protocol: A path is not merely a line between two points. It is the contract that governs how adjacent cards communicate: the major arcana on that edge names the mediating link."
 ].join("\n");
 
+/**
+ * ATHANOR structural notation — symbol legend (6 layers).
+ * Not strict mathematics; symbols denote structure consistently across layers.
+ *
+ * =     binding / definition of a layer quantity
+ * ∘     operator composition (STAGE: Ψ_Pleft ∘ Ψ_Pright on W; GLOBAL: layer pipeline)
+ * ⊕     binary combine of two terms (ACTORS, FATE, TALES)
+ * →     directed transition / synthesis step (TALES: toward Yesod)
+ * |_…   restriction to a frame (FATE: Zodiac archetype)
+ * ∫…dt  accumulate 𝒯 over time (GAZE)
+ * → Collapse  resolve integrated 𝒯 into one observed Planet (GAZE)
+ */
 const LAYER_HELP: Record<Layer["key"], { title: string; body: string; cardLine?: string; formula?: string }> = {
   root: {
     title: "WILL — Intent — Spark",
@@ -254,7 +266,7 @@ const LAYER_HELP: Record<Layer["key"], { title: string; body: string; cardLine?:
     title: "Stage — Domain — Matrix",
     body: "Interpretation: Sephiroth 2-3 (Chokmah-Binah). Two Princesses set the stage through expansion and boundary.\nFunction: They shape how WILL (𝒲) can manifest in this reading.\nQabalistic Anchor: Chokmah (2) opens force; Binah (3) gives form.\nFormula Rationale: Two operators ($\\Psi_{P_{left}}$, $\\Psi_{P_{right}}$) act on one source to produce a workable field.",
     cardLine: "Two Princess cards.",
-    formula: "\\vec{V}_{stage} = \\Psi_{P_{left}} \\cdot \\Psi_{P_{right}}(W)"
+    formula: "\\vec{V}_{stage} = (\\Psi_{P_{left}} \\circ \\Psi_{P_{right}})(W)"
   },
   agents: {
     title: "Actors — Agents — Duality",
