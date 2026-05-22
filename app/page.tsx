@@ -276,9 +276,10 @@ const LAYER_HELP: Record<Layer["key"], { title: string; body: string; cardLine?:
   },
   destiny: {
     title: "Fate — Ordinance — Law",
-    body: "Interpretation: Sephirah 6 (Tiphareth). A Zodiac Major Arcana defines the core pattern of fate.\nFunction: It stabilizes and interprets dynamics coming from 𝒜 (Actors).\nQabalistic Anchor: Tiphareth (6) harmonizes upper cause and lower expression.\nFormula Rationale: $\\mathrm{Harmonize}(\\mathcal{A}_{4} \\oplus \\mathcal{A}_{5})$ is constrained by Zodiac as a fixed archetypal frame.",
+    body: "Interpretation: Sephirah 6 (Tiphareth). A Zodiac Major Arcana defines the core pattern of fate.\nFunction: It stabilizes and interprets dynamics coming from 𝒜 (Actors).\nQabalistic Anchor: Tiphareth (6) harmonizes upper cause and lower expression.\nFormula Rationale: $\\mathrm{Harmonize}(\\vec{F}_{\\mathrm{Chesed}(4)} \\oplus \\vec{F}_{\\mathrm{Geburah}(5)})$ is constrained by Zodiac as a fixed archetypal frame.",
     cardLine: "One Zodiac Major Arcana card.",
-    formula: "\\Phi_{\\mathrm{Fate}} = \\mathrm{Harmonize}\\left(\\mathcal{A}_{4} \\oplus \\mathcal{A}_{5}\\right)\\big|_{\\mathrm{Zodiac}}"
+    formula:
+      "\\Phi_{\\mathrm{Fate}} = \\mathrm{Harmonize}\\left(\\vec{F}_{\\mathrm{Chesed}(4)} \\oplus \\vec{F}_{\\mathrm{Geburah}(5)}\\right)\\big|_{\\mathrm{Zodiac}}"
   },
   events: {
     title: "Tales — Events — Sequences",
