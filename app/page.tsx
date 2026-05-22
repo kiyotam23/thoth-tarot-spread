@@ -244,8 +244,8 @@ const OVERLAY_HELP_SECTIONS = [
 ].join("\n");
 
 /**
- * ATHANOR structural notation — symbol legend (6 layers).
- * Not strict mathematics; symbols denote structure consistently across layers.
+ * ATHANOR structural notation — short symbol legend (implementation).
+ * Canonical spec: ATHANOR_DESIGN.md §3 (Structural notation).
  *
  * =     binding / definition of a layer quantity
  * ∘     operator composition (STAGE: Ψ_Pleft ∘ Ψ_Pright on W; GLOBAL: layer pipeline)
