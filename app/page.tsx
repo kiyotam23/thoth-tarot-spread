@@ -283,9 +283,10 @@ const LAYER_HELP: Record<Layer["key"], { title: string; body: string; cardLine?:
   },
   events: {
     title: "Tales — Events — Sequences",
-    body: "Interpretation: Sephiroth 7-8-9 (Netzach-Hod-Yesod). Three small cards show unfolding sequence.\nFunction: Read them as motive (7), patterning (8), and synthesis (9).\nQabalistic Anchor: Netzach (7) fuels, Hod (8) structures, Yesod (9) consolidates.\nFormula Rationale: Flow moves to Yesod before manifestation in Malkuth.",
+    body: "Interpretation: Sephiroth 7-8-9 (Netzach-Hod-Yesod). Three small cards show unfolding sequence.\nFunction: Read them as motive (7), patterning (8), and synthesis (9).\nQabalistic Anchor: Netzach (7) fuels, Hod (8) structures, Yesod (9) consolidates.\nFormula Rationale: $\\mathrm{Netzach}(\\tau)$, $\\mathrm{Hod}(\\tau)$, and $\\mathrm{Yesod}(\\tau)$ compose $\\mathcal{T}$ over the tale sequence; flow moves to Yesod before manifestation in Malkuth.",
     cardLine: "Three small cards.",
-    formula: "\\mathcal{T}(\\tau) = \\mathrm{Netzach}(7) \\oplus \\mathrm{Hod}(8) \\rightarrow \\mathrm{Yesod}(9)"
+    formula:
+      "\\mathcal{T}(\\tau) = \\mathrm{Netzach}(\\tau) \\oplus \\mathrm{Hod}(\\tau) \\rightarrow \\mathrm{Yesod}(\\tau)"
   },
   focus: {
     title: "Gaze — Vision — Perspective",
