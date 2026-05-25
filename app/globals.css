@@ -42,11 +42,11 @@ body {
 
 /* Thumbnail + back tile outer size (one source of truth) */
 .spread-card-back-shell {
-  @apply h-[7.2rem] w-[5.2rem] sm:h-[8.4rem] sm:w-[6rem] overflow-hidden rounded-lg;
+  @apply h-[7rem] w-[5rem] sm:h-[8.4rem] sm:w-[6rem] lg:h-[6rem] lg:w-[4.15rem] overflow-hidden rounded-lg;
 }
 
 img.spread-card-thumb {
-  @apply h-[7.2rem] w-[5.2rem] object-cover object-center sm:h-[8.4rem] sm:w-[6rem];
+  @apply h-[7rem] w-[5rem] object-cover object-center sm:h-[8.4rem] sm:w-[6rem] lg:h-[6rem] lg:w-[4.15rem];
 }
 
 img.spread-card-back-img {
@@ -59,18 +59,23 @@ img.spread-card-modal-art {
 
 /* Reusable flex rows (Tailwind-only @apply) */
 .spread-card-row {
-  @apply flex justify-center gap-7 sm:gap-9;
+  @apply flex justify-center gap-6 sm:gap-8 lg:gap-4;
 }
 
 /* Two-card rows (3–2, 5–4, 7–8): inner-edge distance ≈ 1.5–2× card width */
 .spread-card-row--pair-wide {
   @apply flex flex-wrap justify-center;
-  column-gap: clamp(2.5rem, 14vw, 11rem);
-  row-gap: 0.65rem;
+  column-gap: clamp(2.15rem, 12vw, 9rem);
+  row-gap: 0.45rem;
 }
 @media (min-width: 640px) {
   .spread-card-row--pair-wide {
-    column-gap: min(11.5rem, 40vw);
+    column-gap: min(9rem, 32vw);
+  }
+}
+@media (min-width: 1024px) {
+  .spread-card-row--pair-wide {
+    column-gap: min(6.7rem, 24vw);
   }
 }
 
