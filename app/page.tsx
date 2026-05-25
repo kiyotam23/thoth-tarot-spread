@@ -381,15 +381,34 @@ function drawUnique(pool: Card[], count: number): Card[] {
 }
 
 const TOTAL_SPREAD_CARDS = LAYERS.reduce((acc, l) => acc + l.drawCount, 0);
+const SEPHIRAH_ECHOES_ENABLED = false;
 
 type SelectedModalPick = {
   cardId: string;
   sephirah: number;
 };
 
+type SephirahMeta = {
+  english: string;
+  subtitle: string;
+};
+
 type SephirahFlankEcho = {
   leftId: string;
   rightId: string;
+};
+
+const SEPHIRAH_META: Record<number, SephirahMeta> = {
+  1: { english: "Kether", subtitle: "Crown, Pure will" },
+  2: { english: "Chokmah", subtitle: "Wisdom, Force, expansion" },
+  3: { english: "Binah", subtitle: "Understanding, Form, limitation" },
+  4: { english: "Chesed", subtitle: "Mercy, Expansion, grace" },
+  5: { english: "Geburah", subtitle: "Severity, Contraction, power" },
+  6: { english: "Tiphareth", subtitle: "Beauty, Harmony, center" },
+  7: { english: "Netzach", subtitle: "Victory, Emotion, desire" },
+  8: { english: "Hod", subtitle: "Splendor, Intellect, form" },
+  9: { english: "Yesod", subtitle: "Foundation, Subconscious, image" },
+  10: { english: "Malkuth", subtitle: "Kingdom, Matter, manifestation" }
 };
 
 function collectSpreadCardIds(drawn: Record<string, Card[]>): Set<string> {
@@ -737,8 +756,9 @@ export default function Page() {
     );
 
   const modalSephirah = selectedModalPick?.sephirah ?? 0;
+  const modalSephirahMeta = modalSephirah >= 1 && modalSephirah <= 10 ? SEPHIRAH_META[modalSephirah] : null;
   const modalFlankEcho =
-    modalSephirah >= 1 && modalSephirah <= 10 ? sephFlankEchoes[modalSephirah] : undefined;
+    SEPHIRAH_ECHOES_ENABLED && modalSephirah >= 1 && modalSephirah <= 10 ? sephFlankEchoes[modalSephirah] : undefined;
 
   const isSequential = revealMode === "ascending" || revealMode === "descending";
   const freestyleRevealedCount = useMemo(
@@ -754,6 +774,7 @@ export default function Page() {
 
   const drawSephirahFlankEcho = useCallback(
     (sephirah: number) => {
+      if (!SEPHIRAH_ECHOES_ENABLED) return;
       if (!completed) return;
       if (sephirah < 1 || sephirah > 10) return;
       setSephFlankEchoes((prev) => {
@@ -1798,11 +1819,21 @@ export default function Page() {
           maxWidth="wide"
           onClose={() => setSelectedModalPick(null)}
         >
-          <div className="flex justify-end">
-            <ModalCloseButton onClick={() => setSelectedModalPick(null)} />
+          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-3">
+            <div aria-hidden="true" />
+            <div className="min-w-0 text-center">
+              {modalSephirahMeta ? (
+                <p className="spread-hint overflow-hidden text-ellipsis whitespace-nowrap text-xs opacity-80 sm:text-sm">
+                  <span className="font-semibold text-slate-100">{modalSephirahMeta.english}</span> - {modalSephirahMeta.subtitle}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex justify-end">
+              <ModalCloseButton onClick={() => setSelectedModalPick(null)} />
+            </div>
           </div>
-          <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:gap-6">
-            <div className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="mt-6 grid gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="flex min-w-0 flex-1 flex-col gap-4 lg:col-start-1">
               {!modalFlankEcho ? (
                 <div className="flex flex-col items-center gap-3">
                   <img
@@ -1811,10 +1842,7 @@ export default function Page() {
                     className="spread-card-modal-art max-w-[min(100%,20rem)]"
                     decoding="async"
                   />
-                  <p className="spread-hint text-center text-xs opacity-80">
-                    Sephirah {modalSephirah} · Spread position
-                  </p>
-                  {completed ? (
+                  {SEPHIRAH_ECHOES_ENABLED && completed ? (
                     <div className="flex w-full max-w-md flex-col items-center gap-2">
                       <button
                         type="button"
@@ -1827,11 +1855,11 @@ export default function Page() {
                         Two random cards from the remaining deck (spread cards excluded). Each Sephirah keeps one L/R pair.
                       </p>
                     </div>
-                  ) : (
+                  ) : SEPHIRAH_ECHOES_ENABLED ? (
                     <p className="max-w-md text-center text-[11px] opacity-70">
                       Unlocks after all {TOTAL_SPREAD_CARDS} spread cards are revealed — then you can add echo cards for every Sephirah.
                     </p>
-                  )}
+                  ) : null}
                 </div>
               ) : (
                 <div className="w-full max-w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
@@ -1861,7 +1889,6 @@ export default function Page() {
                           decoding="async"
                         />
                       </div>
-                      <p className="text-center text-[11px] opacity-80">Sephirah {modalSephirah}</p>
                     </div>
                     <div className="isolate flex min-w-0 flex-col items-center gap-1.5 overflow-hidden px-0.5">
                       <span className="spread-hint text-[10px] font-medium tracking-[0.12em] opacity-85">ECHO R</span>
@@ -1881,8 +1908,8 @@ export default function Page() {
                 </div>
               )}
             </div>
-            <div className="spread-hint min-w-0 flex-1 text-sm leading-relaxed lg:max-w-md">
-              <h3 className="spread-triad text-base font-semibold">{selectedCardModalTitle}</h3>
+            <div className="spread-hint min-w-0 flex-1 text-sm leading-relaxed lg:col-start-2 lg:max-w-md">
+              <h3 className="spread-triad mb-3 text-base font-semibold">{selectedCardModalTitle}</h3>
               <div className="mt-2 grid grid-cols-1 gap-x-5 gap-y-1.5 md:grid-cols-2">
                 {selectedCard.suit ? <p className="min-w-0 leading-snug">Suit: {selectedCard.suit}</p> : null}
                 {showRankInModal ? (

@@ -18,7 +18,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Manual: [http://localhost:3000/manual](http://localhost:3000/manual).
+Open `http://localhost:3000` (or the next free port if 3000 is occupied — Next.js prints the URL in the terminal, e.g. `http://localhost:3002`). Manual: `/manual` on that same host and port.
 
 ## Project layout
 
