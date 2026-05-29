@@ -15,16 +15,16 @@ function renderKatexHtml(tex: string, displayMode: boolean) {
 
 /** Reusable class strings — change layout / chrome in one place */
 const spread = {
-  main: "flex min-h-screen flex-col px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8 lg:box-border lg:min-h-0 lg:h-[100dvh] lg:overflow-hidden lg:px-5 lg:py-4",
-  shell: "mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col gap-5 max-lg:min-h-0 lg:min-h-0 lg:max-h-full lg:flex-row lg:gap-3",
+  main: "flex min-h-screen flex-col px-4 py-6 transition-[background,color] duration-300 sm:px-6 sm:py-8 lg:box-border lg:min-h-0 lg:h-[100dvh] lg:overflow-hidden lg:px-4 lg:py-2",
+  shell: "mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col gap-5 max-lg:min-h-0 lg:min-h-0 lg:max-h-full lg:flex-row lg:gap-2",
   rail:
     "spread-outer w-full shrink-0 rounded-2xl border p-5 supports-[backdrop-filter]:backdrop-blur-sm transition-colors duration-300 max-lg:fixed max-lg:bottom-3 max-lg:inset-x-3 max-lg:w-auto max-lg:z-40 lg:w-[20rem] lg:max-w-[20rem] lg:supports-[backdrop-filter]:backdrop-blur-md",
   canvas:
-    "spread-outer spread-canvas-panel w-full min-w-0 overflow-x-hidden rounded-2xl border px-5 py-7 transition-colors duration-300 sm:px-9 sm:py-8 max-lg:pb-80 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain lg:px-4 lg:py-4 supports-[backdrop-filter]:backdrop-blur-sm lg:supports-[backdrop-filter]:backdrop-blur-md",
+    "spread-outer spread-canvas-panel w-full min-w-0 overflow-x-hidden rounded-2xl border px-5 py-7 transition-colors duration-300 sm:px-9 sm:py-8 max-lg:pb-80 lg:flex lg:h-full lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden lg:px-[clamp(0.6rem,0.9vh,0.85rem)] lg:py-[clamp(0.5rem,0.8vh,0.75rem)] supports-[backdrop-filter]:backdrop-blur-sm lg:supports-[backdrop-filter]:backdrop-blur-md",
   worldCard:
-    "spread-inner spread-panel spread-panel-fade w-full max-w-xl rounded-xl border p-4 transition-colors duration-300 sm:p-5 lg:p-3",
+    "spread-inner spread-panel spread-panel-fade w-full max-w-xl rounded-xl border p-4 transition-colors duration-300 sm:p-5 lg:min-h-0 lg:shrink lg:px-[clamp(0.55rem,0.85vh,0.8rem)] lg:py-[clamp(0.45rem,0.75vh,0.65rem)]",
   worldLabel:
-    "spread-world-label relative z-[3] mb-4 w-full pointer-events-none text-left text-xs font-medium tracking-[0.12em] pl-0.5 lg:mb-2",
+    "spread-world-label relative z-[3] mb-4 w-full pointer-events-none text-left text-xs font-medium tracking-[0.12em] pl-0.5 lg:mb-[clamp(0.2rem,0.45vh,0.35rem)]",
   title: "spread-title whitespace-nowrap font-mono text-xl font-bold tracking-[0.18em] sm:text-2xl",
   brandCopyright:
     "pointer-events-none max-w-2xl select-none text-right text-[8px] font-mono font-thin leading-relaxed tracking-wide opacity-50 sm:ml-auto sm:text-[9px]",
@@ -1505,21 +1505,21 @@ export default function Page() {
           </div>
         </section>
         <section ref={rightPanelRef} className={spread.canvas}>
-          <div ref={treeLayoutRootRef} className="relative z-0 mx-auto w-full max-w-xl">
+          <div ref={treeLayoutRootRef} className="relative z-0 mx-auto w-full max-w-xl lg:flex lg:h-full lg:min-h-0 lg:flex-col">
             {showTreeOfLife && treeLayout ? (
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
                 <TreeOfLifeLines layout={treeLayout} />
               </div>
             ) : null}
-            <div className="spread-canvas-surface relative z-[1] flex w-full flex-col items-center gap-8 sm:gap-10 lg:gap-4">
+            <div className="spread-canvas-surface relative z-[1] flex w-full flex-col items-center gap-8 sm:gap-10 lg:min-h-0 lg:flex-1 lg:justify-between lg:gap-[clamp(0.35rem,0.8vh,0.6rem)]">
               <div className={spread.worldCard}>
                 <p className={spread.worldLabel}>Atziluth</p>
                 <div className="flex flex-col items-center">
-                  {renderTriadLabel(0, "mb-2 lg:mb-1.5")}
+                  {renderTriadLabel(0, "mb-2 lg:mb-[clamp(0.1rem,0.28vh,0.2rem)]")}
                   <div ref={layerRef[LAYERS[0].key]} className="spread-card-row">
                     {cardsByLayer[0]}
                   </div>
-                  {renderTriadLabel(1, "mb-2 mt-3 sm:mt-4 lg:mb-1.5 lg:mt-2.5")}
+                  {renderTriadLabel(1, "mb-2 mt-3 sm:mt-4 lg:mb-[clamp(0.1rem,0.28vh,0.2rem)] lg:mt-[clamp(0.3rem,0.65vh,0.5rem)]")}
                   <div ref={layerRef[LAYERS[1].key]} className="spread-card-row--pair-wide">
                     {cardsByLayer[1]}
                   </div>
@@ -1529,11 +1529,11 @@ export default function Page() {
               <div className={spread.worldCard}>
                 <p className={spread.worldLabel}>Briah</p>
                 <div className="flex flex-col items-center">
-                  {renderTriadLabel(2, "mb-2 lg:mb-1.5")}
+                  {renderTriadLabel(2, "mb-2 lg:mb-[clamp(0.1rem,0.28vh,0.2rem)]")}
                   <div ref={layerRef[LAYERS[2].key]} className="spread-card-row--pair-wide">
                     {cardsByLayer[2]}
                   </div>
-                  {renderTriadLabel(3, "mt-3 mb-2 sm:mt-4 lg:mb-1.5 lg:mt-2.5")}
+                  {renderTriadLabel(3, "mt-3 mb-2 sm:mt-4 lg:mb-[clamp(0.1rem,0.28vh,0.2rem)] lg:mt-[clamp(0.3rem,0.65vh,0.5rem)]")}
                   <div ref={layerRef[LAYERS[3].key]} className="spread-card-row">
                     {cardsByLayer[3]}
                   </div>
@@ -1542,21 +1542,21 @@ export default function Page() {
 
               <div className={spread.worldCard}>
                 <p className={spread.worldLabel}>Yetzirah</p>
-                {renderTriadLabel(4, "mb-2 lg:mb-1.5")}
+                {renderTriadLabel(4, "mb-2 lg:mb-[clamp(0.1rem,0.28vh,0.2rem)]")}
                 <div
                   ref={layerRef[LAYERS[4].key]}
-                  className="mx-auto grid w-fit max-w-full grid-cols-2 [column-gap:clamp(2rem,10vw,8rem)] [row-gap:0.75rem] sm:[column-gap:min(8rem,28vw)] sm:[row-gap:0.9rem] lg:[column-gap:min(6.6rem,24vw)] lg:[row-gap:0.55rem]"
+                  className="mx-auto grid w-fit max-w-full grid-cols-2 [column-gap:clamp(2rem,10vw,8rem)] [row-gap:0.75rem] sm:[column-gap:min(8rem,28vw)] sm:[row-gap:0.9rem] lg:[column-gap:clamp(4.2rem,10vw,5.8rem)] lg:[row-gap:clamp(0.08rem,0.24vh,0.22rem)]"
                 >
                   {yetzirahCards[0]}
                   {yetzirahCards[1]}
-                  <div className="col-span-2 -mt-0.5 flex justify-center pt-0.5 sm:pt-1 lg:pt-0">{yetzirahCards[2]}</div>
+                  <div className="col-span-2 -mt-1 flex justify-center pt-0">{yetzirahCards[2]}</div>
                 </div>
               </div>
 
               <div className={spread.worldCard}>
                 <p className={spread.worldLabel}>Assiah</p>
                 <div className="flex flex-col items-center">
-                  {renderTriadLabel(5, "mb-2 lg:mb-1.5")}
+                  {renderTriadLabel(5, "mb-2 lg:mb-[clamp(0.1rem,0.28vh,0.2rem)]")}
                   <div ref={layerRef[LAYERS[5].key]} className="spread-card-row">
                     {cardsByLayer[5]}
                   </div>

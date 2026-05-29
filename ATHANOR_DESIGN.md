@@ -2,7 +2,7 @@
 
 *Causal-law editor — a structural divination engine built on the Thoth Tarot*
 
-System author: Beeton
+System author: kiyotam23
 
 ---
 
@@ -19,9 +19,15 @@ ATHANOR consists of two layers:
 
 ---
 
-## 1. Framework — Four Worlds and six layers
+## 1. Framework — six layers, observed
 
-ATHANOR’s vertical structure follows the Kabbalistic **Four Worlds**. The six layers are that framework expanded to the resolution needed for practice.
+ATHANOR's vertical structure does not begin from Kabbalah. It begins from an observation about the Thoth deck itself.
+
+**The starting point.** Place all 78 Thoth Tarot cards on the 360° zodiac — the placement carried out in thoth-tarot-wheel. Each card has exact correspondences (zodiac, planet, element, decan), so each card has a place on the wheel.
+
+**The observation.** Once placed, the 78 cards are found to fall into **six grouped layers** — six concentric bands, by card type. This is not a designed layout; it is what the deck does when laid out honestly on the zodiac.
+
+**The correspondence.** Those six observed layers, set against the Kabbalistic **Four Worlds** (Atziluth / Briah / Yetzirah / Assiah), are found to fit the Four-World divisions. The six layers are not derived from the Four Worlds; they were observed first, and then seen to correspond.
 
 | World | ATHANOR layer | Sephirah | Cards |
 |---|---|---|---|
@@ -34,7 +40,9 @@ ATHANOR’s vertical structure follows the Kabbalistic **Four Worlds**. The six 
 
 Total cards: 1+2+2+1+3+1 = **10** — exactly the number of Sephiroth on the Tree.
 
-The Thoth 78-card correspondences, the Four Worlds, and the Tree of Life all derive from the same Kabbalistic system. ATHANOR follows that system faithfully; the ten-card spread is a consequence, not an arbitrary layout. Card counts per layer follow natural groupings in the deck: minor arcana form triads per sign in the decan system, court cards carry degree placements, and aces sit at the center of each elemental quadrant. **The spread is uniquely determined at the intersection of vertical structure (worlds, Sephiroth) and horizontal structure (card group sizes).**
+This convergence is not forced. The Thoth 78-card correspondences, the Four Worlds, and the Tree of Life all derive from the same Kabbalistic source; figures from one source, laid out correctly, meet. ATHANOR did not fit the cards to a framework — the six layers emerged from the deck, and the framework was found to match. Card counts per layer follow natural groupings in the deck: minor arcana form triads per sign in the decan system, court cards carry degree placements, and aces sit at the center of each elemental quadrant. **The spread is determined at the intersection of an observed vertical structure (the six layers) and the horizontal structure of natural card groups.**
+
+ATHANOR implements more than the ten Sephiroth. The Tree of Life is composed of **10 Sephiroth + 22 paths = 32 elements** (the "32 paths of wisdom" of the Sefer Yetzirah). The six-layer spread carries the ten Sephiroth; the **path overlay** (Chapter 6) carries the twenty-two paths. ATHANOR implements the Tree of Life in full.
 
 ---
 
@@ -75,7 +83,81 @@ Implementation: layer help panels render these strings via KaTeX in `app/page.ts
 
 ---
 
-## 4. Data foundation — thoth-tarot-wheel
+## 4. How energy takes form across the layers
+
+Chapter 3 gives the structural notation in symbols. This chapter gives the same thing in plain terms: what each layer *becomes* — how a single energy descends through the six layers and takes on form.
+
+**WILL — energy.** An Ace: the undivided root of an element. Pure energy with a direction but no form yet. This is the seed of the whole reading.
+
+**STAGE — the field, as a 16-element matrix.** The single energy of WILL spreads into a field. The two Princesses set this field as a **4×4 element matrix** — each element interacting with each (fire-of-fire, fire-of-water, and so on), sixteen cells in all. Energy is no longer a point; it is a domain in which things can happen. This is why the layer is named for *Domain / Matrix*.
+
+**ACTORS — the zodiac enters; story becomes possible.** Court cards appear. Court cards correspond to degree spans of the zodiac, so the moment a card lands here, **a zodiac sign enters the board**. With signs present, the standard astrological correspondences (rulerships, relations between signs) become available. Abstract energy now has actors with a place and a time — and a **story can be told**. ACTORS is where the reading starts to move.
+
+**FATE — the protagonist: the zodiac, at Tiphareth.** A zodiac major arcana card. In divination the zodiac sign is the protagonist; on the Tree of Life the protagonist is Tiphareth, the center, the sun. ATHANOR places one on the other — the protagonist of the reading at the protagonist seat of the Tree. This is why FATE, in Spectrum mode, reads *from the center outward in all directions*: the protagonist sits at the center.
+
+**TALES — motive, patterning, synthesis.** Three minor arcana cards at Netzach (7), Hod (8), Yesod (9). Netzach gives motive, Hod gives patterning, Yesod consolidates. These three Sephiroth are grouped into one layer for two reasons that coincide: they are exactly the **Yetzirah** (the World of Formation) of the Four Worlds, and the minor arcana naturally form **triads** in the decan system — three cards to a layer. Tradition and deck structure point to the same grouping.
+
+**GAZE — the material world: planets at Malkuth.** Malkuth is the material world. Planets are what actually move and can be observed in the material world — so placing a planetary major arcana card here is the correct correspondence. The reading resolves into one concrete, observable outcome.
+
+Across the six layers, one energy descends: seed → field → actors → protagonist → unfolding → observable outcome. The structural notation of Chapter 3 is the symbolic record of this same descent.
+
+---
+
+## 5. Layered draw constraint — what makes ATHANOR distinct
+
+Most spreads — Kabbalistic spreads included — treat the 78 cards as one uniform pool. There are ten positions, and any of the 78 cards may land in any position. ATHANOR does not work this way.
+
+ATHANOR **partitions the 78-card deck into six exclusive sub-decks**, and each layer draws only from its own sub-deck:
+
+| Layer | Sephirah | Draws only from | Card abstraction |
+|---|---|---|---|
+| WILL | Kether | Aces (4) | Highest — the pure root of an element |
+| STAGE | Chokmah / Binah | Princesses (4) | Archetypal court ground |
+| ACTORS | Chesed / Geburah | Knights / Queens / Princes (12) | Active agents |
+| FATE | Tiphareth | Zodiac major arcana (12) | Archetypal pattern |
+| TALES | Netzach / Hod / Yesod | Minor arcana (36) | Concrete events |
+| GAZE | Malkuth | Planetary major arcana (7) | Final observable phase |
+
+The assignment is not arbitrary. It maps the **abstraction hierarchy of the cards** onto the **vertical axis of the Tree of Life**. In the Thoth / Golden Dawn system, Aces and major arcana are archetypal; minor pip cards are concrete events. ATHANOR places the more abstract cards in the higher Sephiroth (Kether = abstract origin) and the more concrete cards toward Malkuth (concrete manifestation). The abstraction rank of the card and the abstraction rank of the Sephirah are kept aligned.
+
+This is the constituting idea of ATHANOR. A conventional spread expresses its originality in *how positions are interpreted*; ATHANOR expresses it one level up — in *constraining which cards may reach a position at all*, on the basis of abstraction. It changes not the layout of a spread but the drawing rule itself.
+
+Two consequences follow.
+
+**Divinatory.** In an ordinary spread, a concrete pip landing in an abstract position (a Three in the seat of Kether) forces the reader to absorb the mismatch between the abstraction of the seat and the abstraction of the card. ATHANOR removes that dissonance structurally — seat and card always sit at the same level of abstraction. This is also why the upper layers (WILL / STAGE / ACTORS) read as more abstract: it is the designed outcome of the constraint, not a flaw.
+
+**Structural.** The six-way partition is the same skeleton that thoth-tarot-wheel revealed: placing all 78 cards on the zodiac, six rings emerge. The wheel *observed* that the 78 cards fall into six kinds; ATHANOR *turns that observation into a drawing rule* — each layer draws only from its kind. ATHANOR's draw constraint is a consequence of the wheel's observation, not an independent invention.
+
+### Inherited vs. original
+
+To be precise about what ATHANOR claims:
+
+- **Inherited (from tradition):** the Four Worlds, the Tree of Life and its ten Sephiroth, the Thoth 78-card correspondences (zodiac / planet / element / decan / Hebrew letter / path), and the practice of mapping tarot onto the Tree.
+- **Original (ATHANOR's own construction):** the six-layer articulation and its naming (WILL / STAGE / ACTORS / FATE / TALES / GAZE); the execution-order model (Descending / Ascending / Spectrum); the ten-card layout determined by natural deck groupings; the structural notation; and — centrally — the **layered draw constraint** described above.
+
+ATHANOR's originality lies not in its materials but in their construction. The bricks are traditional; the building is ATHANOR's.
+
+---
+
+## 6. Path overlay — the twenty-two paths
+
+The six-layer spread places cards on the ten Sephiroth. The **path overlay** completes the Tree by adding its twenty-two paths.
+
+When enabled, the overlay superimposes all 22 paths of the Tree of Life onto the board. It is a **fixed reference layer** — independent of the draw, always the same — not a result of the reading. Each path carries three pieces of information:
+
+- **Hebrew letter** — e.g. Path 29 = Qoph, Path 22 = Lamed
+- **Vector** — the two Sephiroth the path connects, e.g. Sephirah 7 ↔ 10, Sephirah 5 ↔ 6
+- **Function** — a one-word role for the path, e.g. *Projection* (The Moon), *Equilibrium* (Adjustment)
+
+Path numbers, Hebrew letters, and major-arcana assignments follow the Golden Dawn system precisely. The *Function* label is ATHANOR's own — the same approach as the structural notation: traditional correspondences kept intact, with one concise functional term added on top.
+
+The overlay is **off by default**. Many users never need it. It serves the reading for those who want to trace paths between Sephiroth, and serves study for those learning the Tree — divination practice doubles as revision of the path correspondences. ATHANOR is a divination tool and a study tool at once.
+
+With the six-layer spread (ten Sephiroth) and the path overlay (twenty-two paths), ATHANOR implements all 32 elements of the Tree of Life.
+
+---
+
+## 7. Data foundation — thoth-tarot-wheel
 
 Beneath ATHANOR sits **thoth-tarot-wheel**: reference data placing all 78 Thoth cards on the 360° zodiac.
 
@@ -88,7 +170,7 @@ SEED selection and other features read this structured data directly. **An accur
 
 ---
 
-## 5. Design intent — structured analysis
+## 8. Design intent — structured analysis
 
 ATHANOR positions divination as a tool that structures the user’s thinking.
 
@@ -100,13 +182,13 @@ Six layers × three directions = eighteen analytic angles. ATHANOR is not built 
 
 ---
 
-## 6. Application — toward an AI divination engine
+## 9. Application — aiming to be a divination engine for AI
 
-ATHANOR is being extended as a next-generation divination engine with AI integration.
+ATHANOR is a structural tarot spread system. **It aims to become a divination engine for AI** — a structured protocol designed for AI to interpret tarot draws within a defined frame, rather than as generic tarot prose.
 
-The wheel data layer plus the structured six-layer model is a strong base for AI interpretation: AI bridges abstract symbols to concrete situations, while wheel accuracy guards against correspondence errors.
+The basis for this aim is already in place. The wheel data layer keeps the 78-card correspondences accurate and independent of the UI; the six-layer model, execution order, and structural notation give AI a *reading frame* — explicit input, action, and output per layer. With these, AI interpretation can stay segmented along structure rather than collapsing into fluent generic tarot writing.
 
-The six layers, execution model, and structural notation give AI a **reading frame** — explicit input, action, and output per layer — so output stays segmented along structure rather than generic tarot prose.
+What remains unproven is the result. Whether AI, given this frame, produces readings that meaningfully extend ATHANOR — or whether AI reaches a structural limit and the engine reveals where rule-based systems cannot replace human imagination — is open. Both outcomes are findings; both belong to the aim.
 
 ---
 
@@ -115,6 +197,8 @@ The six layers, execution model, and structural notation give AI a **reading fra
 ATHANOR is a structural divination engine that:
 
 - **Faithfully implements Kabbalistic tradition (Four Worlds, Tree of Life, Thoth correspondences),**
+- **Implements the Tree in full — ten Sephiroth as the spread, twenty-two paths as the overlay (32 elements),**
+- **Constrains each layer to draw only from an abstraction-matched sub-deck — its constituting original idea,**
 - **Adds a distinctive execution-order analytic model on top,**
 - **Rests on an accurate independent data layer (wheel).**
 

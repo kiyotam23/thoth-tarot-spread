@@ -1,6 +1,6 @@
 # ATHANOR (thoth-tarot-spread)
 
-Six-layer Thoth Tarot spread on the Tree of Life — a structural divination engine with three execution modes (Descending / Ascending / Spectrum).
+A structural tarot spread system — developed toward a divination engine for AI. First implementation: the Thoth deck.
 
 ## Documentation
 
