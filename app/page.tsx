@@ -411,6 +411,39 @@ const SEPHIRAH_META: Record<number, SephirahMeta> = {
   10: { english: "Malkuth", subtitle: "Kingdom, Matter, manifestation" }
 };
 
+function worldForLayerIndex(layerIndex: number): string {
+  if (layerIndex <= 1) return "Atziluth";
+  if (layerIndex <= 3) return "Briah";
+  if (layerIndex === 4) return "Yetzirah";
+  return "Assiah";
+}
+
+function exportCardPayload(card: Card, sephirah: number, slotIndex: number) {
+  const meta = CARD_INDEX[card.id];
+  const sephirahMeta = sephirah >= 1 && sephirah <= 10 ? SEPHIRAH_META[sephirah] : null;
+  return {
+    slotIndex,
+    sephirah,
+    sephirahName: sephirahMeta?.english ?? null,
+    sephirahSubtitle: sephirahMeta?.subtitle ?? null,
+    id: card.id,
+    name: card.name,
+    image: card.image,
+    ...(meta
+      ? {
+          suit: meta.suit,
+          rank: meta.rank,
+          number: meta.number,
+          arcanaTitle: meta.arcanaTitle,
+          elementalAttribution: meta.elementalAttribution,
+          hebrewLetter: meta.hebrewLetter,
+          treeOfLifePath: meta.treeOfLifePath,
+          astrology: meta.astrology
+        }
+      : {})
+  };
+}
+
 function collectSpreadCardIds(drawn: Record<string, Card[]>): Set<string> {
   const ids = new Set<string>();
   for (const arr of Object.values(drawn)) {
@@ -447,6 +480,107 @@ type FreestyleLogEntry = {
   op: (typeof LAYER_OPERATOR_LABELS)[number];
   sephirah: number;
 };
+
+function modeLabelFor(revealMode: RevealMode): string {
+  if (revealMode === "descending") return "Descending";
+  if (revealMode === "ascending") return "Ascending";
+  return "Spectrum";
+}
+
+function protocolForMode(revealMode: RevealMode): string {
+  if (revealMode === "descending") return "WILL";
+  if (revealMode === "ascending") return "GAZE";
+  return "FATE";
+}
+
+function resolveSeedExport(input: {
+  revealMode: RevealMode;
+  drawn: Record<string, Card[]>;
+  manualSeedEnabled: boolean;
+  selectedSeedCard: Card | null;
+  echoEnabled: boolean;
+  revealOrder: number[];
+}): { selection: "manual" | "random"; card: ReturnType<typeof exportCardPayload> | null } {
+  const { revealMode, drawn, manualSeedEnabled, selectedSeedCard, echoEnabled, revealOrder } = input;
+
+  if (revealMode === "freestyle") {
+    const destinyCard = drawn.destiny?.[0] ?? null;
+    const sephirah = sephirahForLayerSlot(3, 0);
+    if (echoEnabled && destinyCard) {
+      return { selection: "manual", card: exportCardPayload(destinyCard, sephirah, 0) };
+    }
+    return {
+      selection: "random",
+      card: destinyCard ? exportCardPayload(destinyCard, sephirah, 0) : null
+    };
+  }
+
+  const seedLayerIndex = revealOrder[0];
+  const seedLayer = LAYERS[seedLayerIndex];
+  const seedCard = drawn[seedLayer.key]?.[0] ?? null;
+  const sephirah = sephirahForLayerSlot(seedLayerIndex, 0);
+
+  if (manualSeedEnabled && selectedSeedCard) {
+    return { selection: "manual", card: exportCardPayload(selectedSeedCard, sephirah, 0) };
+  }
+
+  return {
+    selection: "random",
+    card: seedCard ? exportCardPayload(seedCard, sephirah, 0) : null
+  };
+}
+
+function buildSpreadExportJson(input: {
+  revealMode: RevealMode;
+  drawn: Record<string, Card[]>;
+  manualSeedEnabled: boolean;
+  selectedSeedCard: Card | null;
+  echoEnabled: boolean;
+  revealOrder: number[];
+  freestyleOrderLog: FreestyleLogEntry[];
+}): string {
+  const { revealMode, drawn, manualSeedEnabled, selectedSeedCard, echoEnabled, revealOrder, freestyleOrderLog } = input;
+  const layers = LAYERS.map((layer, layerIndex) => ({
+    layerKey: layer.key,
+    layerTitle: layer.title,
+    operator: LAYER_OPERATOR_LABELS[layerIndex],
+    triad: layer.triad,
+    world: worldForLayerIndex(layerIndex),
+    cards: (drawn[layer.key] ?? []).map((card, slotIndex) =>
+      exportCardPayload(card, sephirahForLayerSlot(layerIndex, slotIndex), slotIndex)
+    )
+  }));
+
+  const payload = {
+    system: "ATHANOR",
+    exportedAt: new Date().toISOString(),
+    mode: modeLabelFor(revealMode),
+    protocol: protocolForMode(revealMode),
+    seed: resolveSeedExport({
+      revealMode,
+      drawn,
+      manualSeedEnabled,
+      selectedSeedCard,
+      echoEnabled,
+      revealOrder
+    }),
+    layers,
+    ...(revealMode === "freestyle" && freestyleOrderLog.length > 0
+      ? {
+          revealOrder: freestyleOrderLog.map((entry, index) => ({
+            step: index + 1,
+            slotKey: entry.slotKey,
+            operator: entry.op,
+            sephirah: entry.sephirah,
+            cardId: entry.cardId,
+            name: entry.name
+          }))
+        }
+      : {})
+  };
+
+  return JSON.stringify(payload, null, 2);
+}
 
 function preloadImageUrls(urls: string[]) {
   for (const src of urls) {
@@ -695,6 +829,7 @@ export default function Page() {
   const [treeLayout, setTreeLayout] = useState<TreeLayout | null>(null);
   const [selectedThothPath, setSelectedThothPath] = useState<ThothPath | null>(null);
   const [selectedModalPick, setSelectedModalPick] = useState<SelectedModalPick | null>(null);
+  const [spreadJsonCopied, setSpreadJsonCopied] = useState(false);
   /** Per-Sephirah (1–10), at most one L/R pair from the leftover deck once drawn */
   const [sephFlankEchoes, setSephFlankEchoes] = useState<Record<number, SephirahFlankEcho>>({});
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -772,6 +907,43 @@ export default function Page() {
   const seedLocked = isSequential && step > 0 && (!manualSeedEnabled || step > 1);
   const completed = isSequential ? step === LAYERS.length : revealMode === "freestyle" && freestyleRevealedCount >= TOTAL_SPREAD_CARDS;
 
+  const spreadExportJson = useMemo(
+    () =>
+      buildSpreadExportJson({
+        revealMode,
+        drawn,
+        manualSeedEnabled,
+        selectedSeedCard,
+        echoEnabled,
+        revealOrder,
+        freestyleOrderLog
+      }),
+    [revealMode, drawn, manualSeedEnabled, selectedSeedCard, echoEnabled, revealOrder, freestyleOrderLog]
+  );
+
+  const copySpreadJson = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(spreadExportJson);
+      setSpreadJsonCopied(true);
+      window.setTimeout(() => setSpreadJsonCopied(false), 2000);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = spreadExportJson;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+        setSpreadJsonCopied(true);
+        window.setTimeout(() => setSpreadJsonCopied(false), 2000);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+  }, [spreadExportJson]);
+
   const drawSephirahFlankEcho = useCallback(
     (sephirah: number) => {
       if (!SEPHIRAH_ECHOES_ENABLED) return;
@@ -812,12 +984,14 @@ export default function Page() {
     setEchoSeedApplied(false);
     setStep(0);
     setSelectedModalPick(null);
+    setSpreadJsonCopied(false);
     setSephFlankEchoes({});
   }, []);
 
   const selectRevealMode = useCallback(
     (m: RevealMode) => {
       setSelectedModalPick(null);
+      setSpreadJsonCopied(false);
       setSephFlankEchoes({});
       setStep(0);
       setActiveHelpKey(null);
@@ -868,6 +1042,7 @@ export default function Page() {
       setStep(0);
     }
     setSelectedModalPick(null);
+    setSpreadJsonCopied(false);
     setSephFlankEchoes({});
     window.scrollTo({ top: 0, behavior: "smooth" });
     rightPanelRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -1210,6 +1385,15 @@ export default function Page() {
               );
             })}
           </div>
+          {completed ? (
+            <button
+              type="button"
+              onClick={() => void copySpreadJson()}
+              className="spread-btn-go mt-1.5 w-full rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.12em] sm:text-[11px]"
+            >
+              {spreadJsonCopied ? "Copied" : "Copy"}
+            </button>
+          ) : null}
         </div>
       ) : (
         <div
@@ -1239,6 +1423,15 @@ export default function Page() {
               );
             })}
           </div>
+          {completed ? (
+            <button
+              type="button"
+              onClick={() => void copySpreadJson()}
+              className="spread-btn-go mt-1.5 w-full rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.12em] sm:text-[11px]"
+            >
+              {spreadJsonCopied ? "Copied" : "Copy"}
+            </button>
+          ) : null}
         </div>
       )}
       <div className={spread.shell}>
