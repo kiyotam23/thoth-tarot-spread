@@ -133,7 +133,7 @@ const FOCUS: Card[] = [
 const LAYERS: Layer[] = [
   {
     key: "root",
-    title: "第1層 Root",
+    title: "第1層 WILL",
     meaning: "物語の種・根源的な意志・季節",
     drawCount: 1,
     pool: ACES,
@@ -141,7 +141,7 @@ const LAYERS: Layer[] = [
   },
   {
     key: "womb",
-    title: "第2層 Womb",
+    title: "第2層 Stage",
     meaning: "舞台設定・具現化の土壌",
     drawCount: 2,
     pool: PRINCESSES,
@@ -149,7 +149,7 @@ const LAYERS: Layer[] = [
   },
   {
     key: "agents",
-    title: "第3層 Agents",
+    title: "第3層 Actors",
     meaning: "動因となる2つの人格",
     drawCount: 2,
     pool: AGENTS,
@@ -157,7 +157,7 @@ const LAYERS: Layer[] = [
   },
   {
     key: "destiny",
-    title: "第4層 Destiny",
+    title: "第4層 Fate",
     meaning: "避けられない運命の潮流",
     drawCount: 1,
     pool: DESTINY,
@@ -165,7 +165,7 @@ const LAYERS: Layer[] = [
   },
   {
     key: "events",
-    title: "第5層 Events",
+    title: "第5層 Tales",
     meaning: "出来事の推移（過去・現在・未来）",
     drawCount: 3,
     pool: EVENTS,
@@ -173,7 +173,7 @@ const LAYERS: Layer[] = [
   },
   {
     key: "focus",
-    title: "第6層 Focus",
+    title: "第6層 Gaze",
     meaning: "物語を読む最終的な視点",
     drawCount: 1,
     pool: FOCUS,
