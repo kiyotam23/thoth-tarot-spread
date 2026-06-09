@@ -4,6 +4,8 @@ export type AstrologyMeta = {
   sign: string | null;
   element: string | null;
   planet: string | null;
+  /** Minor arcana: planet of the card number (Book of Thoth). Non-planets like Zodiac/Earth are null. */
+  numberPlanet: string | null;
   governingSign: string | null;
   modality: string | null;
   planetRuler: string | null;
@@ -22,6 +24,8 @@ export type ThothCardMeta = {
   elementalAttribution: string | null;
   layer: 1 | 2 | 3 | 4 | 5 | 6;
   sephirah: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  /** Ecliptic representative angle (0–360°). Null for planetary majors (no fixed zodiac longitude). */
+  midAngle: number | null;
   hebrewLetter: string | null;
   treeOfLifePath: string | null;
   dayOfWeek: string | null;
@@ -29,6 +33,138 @@ export type ThothCardMeta = {
   astrology: AstrologyMeta;
   logic: LogicMode;
 };
+
+/** Canonical ecliptic midpoints — must match ATHANOR reference data. */
+const MID_ANGLE_BY_ID: Record<string, number> = {
+  "2-wands": 5,
+  "3-wands": 15,
+  "4-wands": 25,
+  "5-disks": 35,
+  "6-disks": 45,
+  "7-disks": 55,
+  "8-swords": 65,
+  "9-swords": 75,
+  "10-swords": 85,
+  "2-cups": 95,
+  "3-cups": 105,
+  "4-cups": 115,
+  "5-wands": 125,
+  "6-wands": 135,
+  "7-wands": 145,
+  "8-disks": 155,
+  "9-disks": 165,
+  "10-disks": 175,
+  "2-swords": 185,
+  "3-swords": 195,
+  "4-swords": 205,
+  "5-cups": 215,
+  "6-cups": 225,
+  "7-cups": 235,
+  "8-wands": 245,
+  "9-wands": 255,
+  "10-wands": 265,
+  "2-disks": 275,
+  "3-disks": 285,
+  "4-disks": 295,
+  "5-swords": 305,
+  "6-swords": 315,
+  "7-swords": 325,
+  "8-cups": 335,
+  "9-cups": 345,
+  "10-cups": 355,
+  "aries-emperor": 15,
+  "taurus-hierophant": 45,
+  "gemini-lovers": 75,
+  "cancer-chariot": 105,
+  "leo-lust": 135,
+  "virgo-hermit": 165,
+  "libra-adjustment": 195,
+  "scorpio-death": 225,
+  "sagittarius-art": 255,
+  "capricorn-devil": 285,
+  "aquarius-star": 315,
+  "pisces-moon": 345,
+  "queen-wands": 5,
+  "prince-disks": 35,
+  "knight-swords": 65,
+  "queen-cups": 95,
+  "prince-wands": 125,
+  "knight-disks": 155,
+  "queen-swords": 185,
+  "prince-cups": 215,
+  "knight-wands": 245,
+  "queen-disks": 275,
+  "prince-swords": 305,
+  "knight-cups": 335,
+  "princess-disks": 45,
+  "princess-wands": 135,
+  "princess-cups": 225,
+  "princess-swords": 315,
+  "ace-wands": 45,
+  "ace-cups": 135,
+  "ace-disks": 225,
+  "ace-swords": 315
+};
+
+const PLANETARY_MAJOR_IDS = new Set([
+  "sun",
+  "moon",
+  "mercury",
+  "venus",
+  "mars",
+  "jupiter",
+  "saturn",
+  "uranus",
+  "neptune",
+  "pluto"
+]);
+
+/** Book of Thoth number-planet attributions for minor arcana (non-planet values omitted). */
+const NUMBER_PLANET_BY_ID: Record<string, string> = {
+  "3-wands": "Saturn",
+  "4-wands": "Jupiter",
+  "5-disks": "Mars",
+  "6-disks": "Sun",
+  "7-disks": "Venus",
+  "8-swords": "Mercury",
+  "9-swords": "Moon",
+  "10-swords": "Earth",
+  "3-cups": "Saturn",
+  "4-cups": "Jupiter",
+  "5-wands": "Mars",
+  "6-wands": "Sun",
+  "7-wands": "Venus",
+  "8-disks": "Mercury",
+  "9-disks": "Moon",
+  "10-disks": "Earth",
+  "3-swords": "Saturn",
+  "4-swords": "Jupiter",
+  "5-cups": "Mars",
+  "6-cups": "Sun",
+  "7-cups": "Venus",
+  "8-wands": "Mercury",
+  "9-wands": "Moon",
+  "10-wands": "Earth",
+  "3-disks": "Saturn",
+  "4-disks": "Jupiter",
+  "5-swords": "Mars",
+  "6-swords": "Sun",
+  "7-swords": "Venus",
+  "8-cups": "Mercury",
+  "9-cups": "Moon",
+  "10-cups": "Earth"
+};
+
+function midAngleFor(id: string): number | null {
+  if (PLANETARY_MAJOR_IDS.has(id)) return null;
+  return MID_ANGLE_BY_ID[id] ?? null;
+}
+
+function numberPlanetForMinorId(id: string): string | null {
+  const raw = NUMBER_PLANET_BY_ID[id];
+  if (!raw || raw === "Zodiac" || raw === "Earth") return null;
+  return raw;
+}
 
 const SIGN_DECAN_DATA = {
   Aries: [
@@ -499,6 +635,7 @@ const cards: ThothCardMeta[] = [];
     elementalAttribution: suit.element,
     layer: 1,
     sephirah: 1,
+    midAngle: midAngleFor(`ace-${suitKey}`),
     hebrewLetter: null,
     treeOfLifePath: null,
     dayOfWeek: null,
@@ -507,6 +644,7 @@ const cards: ThothCardMeta[] = [];
       sign: null,
       element: suit.element,
       planet: null,
+      numberPlanet: null,
       governingSign: null,
       modality: null,
       planetRuler: null,
@@ -527,6 +665,7 @@ const cards: ThothCardMeta[] = [];
     elementalAttribution: `Earth of ${suit.element}`,
     layer: 2,
     sephirah: 10,
+    midAngle: midAngleFor(`princess-${suitKey}`),
     hebrewLetter: null,
     treeOfLifePath: null,
     dayOfWeek: null,
@@ -535,6 +674,7 @@ const cards: ThothCardMeta[] = [];
       sign: null,
       element: suit.element,
       planet: "Earth",
+      numberPlanet: null,
       governingSign: null,
       modality: null,
       planetRuler: null,
@@ -569,6 +709,7 @@ const cards: ThothCardMeta[] = [];
       elementalAttribution: `${elementByRank[rank]} of ${suit.element}`,
       layer: 3,
       sephirah: sephirahByRank[rank],
+      midAngle: midAngleFor(`${rank}-${suitKey}`),
       hebrewLetter: null,
       treeOfLifePath: null,
       dayOfWeek: null,
@@ -577,6 +718,7 @@ const cards: ThothCardMeta[] = [];
         sign: courtSpan.sign,
         element: suit.element,
         planet: null,
+        numberPlanet: null,
         governingSign: null,
         modality: courtSpan.modality,
         planetRuler: ZODIAC_RULER[courtSpan.ruler],
@@ -607,8 +749,9 @@ const cards: ThothCardMeta[] = [];
           ? "Fixed"
           : "Mutable";
 
+    const minorId = `${number}-${suitKey}`;
     cards.push({
-      id: `${number}-${suitKey}`,
+      id: minorId,
       name: `${number} of ${suit.title}`,
       image: `/images/${number}-of-${suitKey}.png`,
       suit: suit.title,
@@ -618,6 +761,7 @@ const cards: ThothCardMeta[] = [];
       elementalAttribution: suit.element,
       layer: 5,
       sephirah: number as 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10,
+      midAngle: midAngleFor(minorId),
       hebrewLetter: null,
       treeOfLifePath: null,
       dayOfWeek: null,
@@ -626,6 +770,7 @@ const cards: ThothCardMeta[] = [];
         sign,
         element: suit.element,
         planet: signDecan.planet,
+        numberPlanet: numberPlanetForMinorId(minorId),
         governingSign: null,
         modality,
         planetRuler: signDecan.planet,
@@ -649,6 +794,7 @@ ZODIAC_DESTINY.forEach((major) => {
     elementalAttribution: null,
     layer: 4,
     sephirah: 6,
+    midAngle: midAngleFor(major.id),
     hebrewLetter: major.hebrewLetter,
     treeOfLifePath: major.treeOfLifePath,
     dayOfWeek: null,
@@ -656,7 +802,8 @@ ZODIAC_DESTINY.forEach((major) => {
     astrology: {
       sign: major.sign,
       element: major.element,
-        planet: ZODIAC_RULER[major.sign],
+      planet: ZODIAC_RULER[major.sign],
+      numberPlanet: null,
       governingSign: null,
       modality: major.modality,
       planetRuler: ZODIAC_RULER[major.sign],
@@ -679,6 +826,7 @@ PLANET_FOCUS.forEach((major) => {
     elementalAttribution: null,
     layer: 6,
     sephirah: 10,
+    midAngle: midAngleFor(major.id),
     hebrewLetter: major.hebrewLetter,
     treeOfLifePath: major.treeOfLifePath,
     dayOfWeek: major.dayOfWeek,
@@ -687,6 +835,7 @@ PLANET_FOCUS.forEach((major) => {
       sign: null,
       element: null,
       planet: major.planet,
+      numberPlanet: null,
       governingSign: major.governingSign,
       modality: null,
       planetRuler: major.planet,

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ALL_CARDS, CARD_INDEX } from "../constants/cards";
 import type { ThothPath } from "../constants/thothPaths";
+import { detectPathResonances } from "../lib/aspectEngine";
 import { TreeOfLifeLines, TreePathHitLayer, type TreeLayout } from "./TreeOfLifeBackground";
 
 const KATEX_OPTS = { throwOnError: false } as const;
@@ -60,8 +61,10 @@ type Card = {
   note?: string;
 };
 
+type LayerKey = "will" | "stage" | "actors" | "fate" | "tales" | "gaze";
+
 type Layer = {
-  key: string;
+  key: LayerKey;
   title: string;
   meaning: string;
   drawCount: number;
@@ -132,7 +135,7 @@ const FOCUS: Card[] = [
 
 const LAYERS: Layer[] = [
   {
-    key: "root",
+    key: "will",
     title: "第1層 WILL",
     meaning: "物語の種・根源的な意志・季節",
     drawCount: 1,
@@ -140,44 +143,44 @@ const LAYERS: Layer[] = [
     triad: ["WILL", "Intent", "Spark"]
   },
   {
-    key: "womb",
-    title: "第2層 Stage",
+    key: "stage",
+    title: "第2層 STAGE",
     meaning: "舞台設定・具現化の土壌",
     drawCount: 2,
     pool: PRINCESSES,
-    triad: ["Stage", "Domain", "Matrix"]
+    triad: ["STAGE", "Domain", "Matrix"]
   },
   {
-    key: "agents",
-    title: "第3層 Actors",
+    key: "actors",
+    title: "第3層 ACTORS",
     meaning: "動因となる2つの人格",
     drawCount: 2,
     pool: AGENTS,
-    triad: ["Actors", "Agents", "Duality"]
+    triad: ["ACTORS", "Agents", "Duality"]
   },
   {
-    key: "destiny",
-    title: "第4層 Fate",
+    key: "fate",
+    title: "第4層 FATE",
     meaning: "避けられない運命の潮流",
     drawCount: 1,
     pool: DESTINY,
-    triad: ["Fate", "Ordinance", "Law"]
+    triad: ["FATE", "Ordinance", "Law"]
   },
   {
-    key: "events",
-    title: "第5層 Tales",
+    key: "tales",
+    title: "第5層 TALES",
     meaning: "出来事の推移（過去・現在・未来）",
     drawCount: 3,
     pool: EVENTS,
-    triad: ["Tales", "Events", "Sequences"]
+    triad: ["TALES", "Events", "Sequences"]
   },
   {
-    key: "focus",
-    title: "第6層 Gaze",
+    key: "gaze",
+    title: "第6層 GAZE",
     meaning: "物語を読む最終的な視点",
     drawCount: 1,
     pool: FOCUS,
-    triad: ["Gaze", "Vision", "Perspective"]
+    triad: ["GAZE", "Vision", "Perspective"]
   }
 ];
 
@@ -255,41 +258,41 @@ const OVERLAY_HELP_SECTIONS = [
  * ∫…dt  accumulate 𝒯 over time (GAZE)
  * → Collapse  resolve integrated 𝒯 into one observed Planet (GAZE)
  */
-const LAYER_HELP: Record<Layer["key"], { title: string; body: string; cardLine?: string; formula?: string }> = {
-  root: {
+const LAYER_HELP: Record<LayerKey, { title: string; body: string; cardLine?: string; formula?: string }> = {
+  will: {
     title: "WILL — Intent — Spark",
     body: "Interpretation: Sephirah 1 (Kether). The Ace defines root WILL and elemental direction.\nFunction: Use this as the baseline intention for the whole reading.\nQabalistic Anchor: Kether (1) is the undivided origin.\nFormula Rationale: $\\vec{V}_{seed}$ is singular because the spread begins from one seed.",
     cardLine: "One Ace card.",
     formula: "\\vec{V}_{seed} = \\mathrm{Ace}_{element}"
   },
-  womb: {
-    title: "Stage — Domain — Matrix",
+  stage: {
+    title: "STAGE — Domain — Matrix",
     body: "Interpretation: Sephiroth 2-3 (Chokmah-Binah). Two Princesses set the stage through expansion and boundary.\nFunction: They shape how WILL (𝒲) can manifest in this reading.\nQabalistic Anchor: Chokmah (2) opens force; Binah (3) gives form.\nFormula Rationale: Two operators ($\\Psi_{P_{left}}$, $\\Psi_{P_{right}}$) act on one source to produce a workable field.",
     cardLine: "Two Princess cards.",
     formula: "\\vec{V}_{stage} = (\\Psi_{P_{left}} \\circ \\Psi_{P_{right}})(W)"
   },
-  agents: {
-    title: "Actors — Agents — Duality",
+  actors: {
+    title: "ACTORS — Agents — Duality",
     body: "Interpretation: Sephiroth 4-5 (Chesed-Geburah). Court cards represent active powers in tension.\nFunction: Read their balance as the current driving momentum of events.\nQabalistic Anchor: Chesed (4) expands and supports; Geburah (5) limits and corrects.\nFormula Rationale: $\\vec{F}_{net}$ is directional because outcome depends on opposing forces.",
     cardLine: "Two Court cards (Knight / Queen / Prince).",
     formula: "\\vec{F}_{net} = \\vec{F}_{\\mathrm{Chesed}(4)} \\oplus \\vec{F}_{\\mathrm{Geburah}(5)}"
   },
-  destiny: {
-    title: "Fate — Ordinance — Law",
+  fate: {
+    title: "FATE — Ordinance — Law",
     body: "Interpretation: Sephirah 6 (Tiphareth). A Zodiac Major Arcana defines the core pattern of fate.\nFunction: It stabilizes and interprets dynamics coming from 𝒜 (Actors).\nQabalistic Anchor: Tiphareth (6) harmonizes upper cause and lower expression.\nFormula Rationale: $\\mathrm{Harmonize}(\\vec{F}_{\\mathrm{Chesed}(4)} \\oplus \\vec{F}_{\\mathrm{Geburah}(5)})$ is constrained by Zodiac as a fixed archetypal frame.",
     cardLine: "One Zodiac Major Arcana card.",
     formula:
       "\\Phi_{\\mathrm{Fate}} = \\mathrm{Harmonize}\\left(\\vec{F}_{\\mathrm{Chesed}(4)} \\oplus \\vec{F}_{\\mathrm{Geburah}(5)}\\right)\\big|_{\\mathrm{Zodiac}}"
   },
-  events: {
-    title: "Tales — Events — Sequences",
+  tales: {
+    title: "TALES — Events — Sequences",
     body: "Interpretation: Sephiroth 7-8-9 (Netzach-Hod-Yesod). Three small cards show unfolding sequence.\nFunction: Read them as motive (7), patterning (8), and synthesis (9).\nQabalistic Anchor: Netzach (7) fuels, Hod (8) structures, Yesod (9) consolidates.\nFormula Rationale: $\\mathrm{Netzach}(\\tau)$, $\\mathrm{Hod}(\\tau)$, and $\\mathrm{Yesod}(\\tau)$ compose $\\mathcal{T}$ over the tale sequence; flow moves to Yesod before manifestation in Malkuth.",
     cardLine: "Three small cards.",
     formula:
       "\\mathcal{T}(\\tau) = \\mathrm{Netzach}(\\tau) \\oplus \\mathrm{Hod}(\\tau) \\rightarrow \\mathrm{Yesod}(\\tau)"
   },
-  focus: {
-    title: "Gaze — Vision — Perspective",
+  gaze: {
+    title: "GAZE — Vision — Perspective",
     body: "Interpretation: Sephirah 10 (Malkuth). The planetary Major Arcana shows the final observable phase.\nFunction: It integrates 𝒯 over time and resolves the reading into one practical lens.\nQabalistic Anchor: Malkuth (10) is the grounded endpoint of the Tree.\nFormula Rationale: Integral + collapse expresses accumulation followed by one concrete outcome.",
     cardLine: "One Planetary Major Arcana card.",
     formula:
@@ -297,7 +300,7 @@ const LAYER_HELP: Record<Layer["key"], { title: string; body: string; cardLine?:
   }
 };
 
-const LAYERS_BY_KEY = Object.fromEntries(LAYERS.map((layer) => [layer.key, layer])) as Record<Layer["key"], Layer>;
+const LAYERS_BY_KEY = Object.fromEntries(LAYERS.map((layer) => [layer.key, layer])) as Record<LayerKey, Layer>;
 
 function LatexInline({ tex }: { tex: string }) {
   const html = useMemo(() => renderKatexHtml(tex, false), [tex]);
@@ -504,7 +507,7 @@ function resolveSeedExport(input: {
   const { revealMode, drawn, manualSeedEnabled, selectedSeedCard, echoEnabled, revealOrder } = input;
 
   if (revealMode === "freestyle") {
-    const destinyCard = drawn.destiny?.[0] ?? null;
+    const destinyCard = drawn.fate?.[0] ?? null;
     const sephirah = sephirahForLayerSlot(3, 0);
     if (echoEnabled && destinyCard) {
       return { selection: "manual", card: exportCardPayload(destinyCard, sephirah, 0) };
@@ -551,6 +554,14 @@ function buildSpreadExportJson(input: {
     )
   }));
 
+  const spreadCards = layers.flatMap((layer) =>
+    layer.cards.map((card) => ({
+      id: card.id,
+      name: card.name,
+      sephirah: card.sephirah
+    }))
+  );
+
   const payload = {
     system: "ATHANOR",
     exportedAt: new Date().toISOString(),
@@ -565,6 +576,7 @@ function buildSpreadExportJson(input: {
       revealOrder
     }),
     layers,
+    pathResonances: detectPathResonances(spreadCards),
     ...(revealMode === "freestyle" && freestyleOrderLog.length > 0
       ? {
           revealOrder: freestyleOrderLog.map((entry, index) => ({
@@ -814,7 +826,7 @@ export default function Page() {
   const [revealMode, setRevealMode] = useState<RevealMode>("descending");
   const [freestyleFaceUp, setFreestyleFaceUp] = useState<Record<string, boolean>>({});
   const [freestyleOrderLog, setFreestyleOrderLog] = useState<FreestyleLogEntry[]>([]);
-  const [activeHelpKey, setActiveHelpKey] = useState<Layer["key"] | null>(null);
+  const [activeHelpKey, setActiveHelpKey] = useState<LayerKey | null>(null);
   const [isGlobalHelpOpen, setIsGlobalHelpOpen] = useState(false);
   const [isOverlayHelpOpen, setIsOverlayHelpOpen] = useState(false);
   const [showMobileAdvancedControls, setShowMobileAdvancedControls] = useState(false);
@@ -848,7 +860,7 @@ export default function Page() {
             layerRefs.current[layer.key] = el;
           }
         ])
-      ) as Record<Layer["key"], (el: HTMLDivElement | null) => void>,
+      ) as Record<LayerKey, (el: HTMLDivElement | null) => void>,
     []
   );
 
@@ -1093,18 +1105,18 @@ export default function Page() {
     const selected = DESTINY.find((card) => card.id === echoCardId);
     if (!selected) return;
     preloadImageUrls([selected.image]);
-    setFreestyleFaceUp((prev) => ({ ...prev, destiny__0: true }));
+    setFreestyleFaceUp((prev) => ({ ...prev, fate__0: true }));
     setDrawn((prev) => {
-      const current = prev.destiny;
+      const current = prev.fate;
       if (current?.length === 1 && current[0]?.id === selected.id) return prev;
-      return { ...prev, destiny: [selected] };
+      return { ...prev, fate: [selected] };
     });
     setFreestyleOrderLog((prev) => {
-      const idx = prev.findIndex((entry) => entry.slotKey === "destiny__0");
+      const idx = prev.findIndex((entry) => entry.slotKey === "fate__0");
       if (idx < 0) {
         return [
           ...prev,
-          { slotKey: "destiny__0", cardId: selected.id, name: selected.name, op: LAYER_OPERATOR_LABELS[3], sephirah: 6 }
+          { slotKey: "fate__0", cardId: selected.id, name: selected.name, op: LAYER_OPERATOR_LABELS[3], sephirah: 6 }
         ];
       }
       const next = [...prev];
