@@ -122,4 +122,24 @@ const knightWandsDual = analyzeSpread([exportCard("knight-wands", 4)]).dualityFl
 assert.ok(knightWandsDual);
 assert.equal(knightWandsDual!.match, true, "Knight of Wands Fire of Fire");
 
+// modalityNote: 6 sign-bearing cards, evenly split across modalities
+const modalitySpread: ExportCard[] = [
+  exportCard("ace-wands", 1),
+  exportCard("princess-cups", 2),
+  exportCard("queen-swords", 3),
+  exportCard("knight-disks", 4),
+  exportCard("scorpio-death", 5),
+  exportCard("2-cups", 6),
+  exportCard("6-cups", 7),
+  exportCard("8-cups", 8),
+  exportCard("sun", 9),
+  exportCard("moon", 10)
+];
+
+const modality = analyzeSpread(modalitySpread).modalityNote;
+assert.deepEqual(modality.counts, { Cardinal: 2, Fixed: 2, Mutable: 2 });
+assert.equal(modality.signCardCount, 6);
+assert.equal(modality.dominantModality, null);
+assert.deepEqual(modality.missing, []);
+
 console.log("spreadAnalysis.test.ts: all assertions passed");

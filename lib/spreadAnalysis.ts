@@ -103,6 +103,17 @@ export type ResonanceClusters = {
   byElement: Record<string, CardRef[]>;
 };
 
+export type ModalityNote = {
+  counts: {
+    Cardinal: number;
+    Fixed: number;
+    Mutable: number;
+  };
+  signCardCount: number;
+  dominantModality: string | null;
+  missing: string[];
+};
+
 export type SpreadAnalysis = {
   pillars: PillarCensus;
   census: Census;
@@ -111,6 +122,7 @@ export type SpreadAnalysis = {
   pathMatrix: PathAdjacency[];
   majorPathLandings: MajorPathLanding[];
   resonanceClusters: ResonanceClusters;
+  modalityNote: ModalityNote;
 };
 
 const PILLAR_OF_SEPHIRAH: Record<number, "mercy" | "severity" | "equilibrium"> = {
@@ -681,6 +693,29 @@ function computeResonanceClusters(cards: ExportCard[]): ResonanceClusters {
   };
 }
 
+function computeModalityNote(cards: ExportCard[]): ModalityNote {
+  const counts = { Cardinal: 0, Fixed: 0, Mutable: 0 };
+  let signCardCount = 0;
+
+  for (const card of cards) {
+    const meta = metaFor(card);
+    const modality = meta?.astrology.modality ?? card.astrology?.modality;
+    if (!modality || !(ALL_MODALITIES as readonly string[]).includes(modality)) continue;
+
+    counts[modality as keyof typeof counts] += 1;
+    signCardCount += 1;
+  }
+
+  const countRecord: Record<string, number> = counts;
+
+  return {
+    counts,
+    signCardCount,
+    dominantModality: dominantKey(countRecord, ALL_MODALITIES),
+    missing: ALL_MODALITIES.filter((m) => (counts[m as keyof typeof counts] ?? 0) === 0)
+  };
+}
+
 /** Deterministic structure census for a ten-card spread export. */
 export function analyzeSpread(cards: ExportCard[]): SpreadAnalysis {
   return {
@@ -690,7 +725,8 @@ export function analyzeSpread(cards: ExportCard[]): SpreadAnalysis {
     resonances: computeResonances(cards),
     pathMatrix: computePathMatrix(cards),
     majorPathLandings: computeMajorPathLandings(cards),
-    resonanceClusters: computeResonanceClusters(cards)
+    resonanceClusters: computeResonanceClusters(cards),
+    modalityNote: computeModalityNote(cards)
   };
 }
 
