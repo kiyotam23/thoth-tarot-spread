@@ -567,7 +567,7 @@ function computeResonances(cards: ExportCard[]): Resonance[] {
 }
 
 function computePathMatrix(cards: ExportCard[]): PathAdjacency[] {
-  const sephiroth = [...new Set(cards.map((c) => c.sephirah))].sort((a, b) => a - b);
+  const sephiroth = Array.from(new Set(cards.map((c) => c.sephirah))).sort((a, b) => a - b);
   const matrix: PathAdjacency[] = [];
 
   for (let i = 0; i < sephiroth.length; i += 1) {
