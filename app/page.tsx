@@ -6,6 +6,7 @@ import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { ALL_CARDS, CARD_INDEX } from "../constants/cards";
 import type { ThothPath } from "../constants/thothPaths";
 import { detectPathResonances } from "../lib/aspectEngine";
+import { analyzeSpread } from "../lib/spreadAnalysis";
 import { TreeOfLifeLines, TreePathHitLayer, type TreeLayout } from "./TreeOfLifeBackground";
 
 const KATEX_OPTS = { throwOnError: false } as const;
@@ -549,9 +550,11 @@ function buildSpreadExportJson(input: {
     operator: LAYER_OPERATOR_LABELS[layerIndex],
     triad: layer.triad,
     world: worldForLayerIndex(layerIndex),
-    cards: (drawn[layer.key] ?? []).map((card, slotIndex) =>
-      exportCardPayload(card, sephirahForLayerSlot(layerIndex, slotIndex), slotIndex)
-    )
+    cards: (drawn[layer.key] ?? [])
+      .map((card, slotIndex) =>
+        exportCardPayload(card, sephirahForLayerSlot(layerIndex, slotIndex), slotIndex)
+      )
+      .sort((a, b) => a.sephirah - b.sephirah)
   }));
 
   const spreadCards = layers.flatMap((layer) =>
@@ -561,6 +564,8 @@ function buildSpreadExportJson(input: {
       sephirah: card.sephirah
     }))
   );
+
+  const spreadCardsForAnalysis = layers.flatMap((layer) => layer.cards);
 
   const payload = {
     system: "ATHANOR",
@@ -577,6 +582,7 @@ function buildSpreadExportJson(input: {
     }),
     layers,
     pathResonances: detectPathResonances(spreadCards),
+    analysis: analyzeSpread(spreadCardsForAnalysis),
     ...(revealMode === "freestyle" && freestyleOrderLog.length > 0
       ? {
           revealOrder: freestyleOrderLog.map((entry, index) => ({
