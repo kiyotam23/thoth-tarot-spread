@@ -241,13 +241,13 @@ function metaFor(card: ExportCard): ThothCardMeta | undefined {
   return CARD_INDEX[card.id];
 }
 
-/** Element for census / clusters — planetary majors return null (skipped). */
-function cardElement(card: ExportCard, meta?: ThothCardMeta): string | null {
+/** Element for census / clusters — planetary majors skipped unless mother-letter element is set. */
+export function cardElement(card: ExportCard, meta?: ThothCardMeta): string | null {
   const m = meta ?? metaFor(card);
   if (!m) return null;
-  if (PLANETARY_MAJOR_IDS.has(m.id)) return null;
 
   if (m.astrology.element) return m.astrology.element;
+  if (PLANETARY_MAJOR_IDS.has(m.id)) return null;
 
   const attr = m.elementalAttribution ?? card.elementalAttribution;
   if (!attr) return null;

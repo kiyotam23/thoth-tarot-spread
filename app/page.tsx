@@ -5,8 +5,9 @@ import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ALL_CARDS, CARD_INDEX } from "../constants/cards";
 import type { ThothPath } from "../constants/thothPaths";
+import { AnalysisMatrixView } from "./AnalysisMatrixView";
 import { detectPathResonances } from "../lib/aspectEngine";
-import { analyzeSpread } from "../lib/spreadAnalysis";
+import { analyzeSpread, type ExportCard } from "../lib/spreadAnalysis";
 import { TreeOfLifeLines, TreePathHitLayer, type TreeLayout } from "./TreeOfLifeBackground";
 
 const KATEX_OPTS = { throwOnError: false } as const;
@@ -35,6 +36,8 @@ const spread = {
   modalZCard: "z-[70]",
   modalSheet: "spread-outer w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl border p-4",
   modalSheetWide: "spread-outer w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border p-4",
+  modalSheetMatrix:
+    "spread-outer w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl border p-4 sm:p-5",
   helpIcon: "spread-btn-ghost inline-flex h-5 w-5 items-center justify-center rounded-full p-0 text-[11px] leading-none",
   modalClose: "spread-btn-ghost rounded-full px-2 py-1 text-xs",
   floatWrap: "hidden",
@@ -351,10 +354,17 @@ function SpreadDialog({
 }: {
   "aria-label": string;
   z: "help" | "card";
-  maxWidth: "md" | "wide";
+  maxWidth: "md" | "wide" | "matrix";
   onClose: () => void;
   children: ReactNode;
 }) {
+  const sheetClass =
+    maxWidth === "matrix"
+      ? spread.modalSheetMatrix
+      : maxWidth === "wide"
+        ? spread.modalSheetWide
+        : spread.modalSheet;
+
   return (
     <div
       role="dialog"
@@ -363,10 +373,7 @@ function SpreadDialog({
       className={`${spread.modalOverlay} ${z === "help" ? spread.modalZHelp : spread.modalZCard}`}
       onClick={onClose}
     >
-      <div
-        className={maxWidth === "wide" ? spread.modalSheetWide : spread.modalSheet}
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div className={sheetClass} onClick={(event) => event.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -534,6 +541,16 @@ function resolveSeedExport(input: {
   };
 }
 
+function collectSpreadExportCards(drawn: Record<string, Card[]>): ExportCard[] {
+  return LAYERS.flatMap((layer, layerIndex) =>
+    (drawn[layer.key] ?? [])
+      .map((card, slotIndex) =>
+        exportCardPayload(card, sephirahForLayerSlot(layerIndex, slotIndex), slotIndex)
+      )
+      .sort((a, b) => a.sephirah - b.sephirah)
+  );
+}
+
 function buildSpreadExportJson(input: {
   revealMode: RevealMode;
   drawn: Record<string, Card[]>;
@@ -557,15 +574,13 @@ function buildSpreadExportJson(input: {
       .sort((a, b) => a.sephirah - b.sephirah)
   }));
 
-  const spreadCards = layers.flatMap((layer) =>
-    layer.cards.map((card) => ({
-      id: card.id,
-      name: card.name,
-      sephirah: card.sephirah
-    }))
-  );
+  const spreadCardsForAnalysis = collectSpreadExportCards(drawn);
 
-  const spreadCardsForAnalysis = layers.flatMap((layer) => layer.cards);
+  const spreadCards = spreadCardsForAnalysis.map((card) => ({
+    id: card.id,
+    name: card.name,
+    sephirah: card.sephirah
+  }));
 
   const payload = {
     system: "ATHANOR",
@@ -598,6 +613,21 @@ function buildSpreadExportJson(input: {
   };
 
   return JSON.stringify(payload, null, 2);
+}
+
+function spreadExportFilename(json: string): string {
+  try {
+    const exportedAt = JSON.parse(json).exportedAt as string | undefined;
+    if (exportedAt) {
+      const d = new Date(exportedAt);
+      if (!Number.isNaN(d.getTime())) {
+        return `athanor-spread-${d.toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+      }
+    }
+  } catch {
+    /* use fallback below */
+  }
+  return `athanor-spread-${new Date().toISOString().slice(0, 10)}.json`;
 }
 
 function preloadImageUrls(urls: string[]) {
@@ -848,6 +878,8 @@ export default function Page() {
   const [selectedThothPath, setSelectedThothPath] = useState<ThothPath | null>(null);
   const [selectedModalPick, setSelectedModalPick] = useState<SelectedModalPick | null>(null);
   const [spreadJsonCopied, setSpreadJsonCopied] = useState(false);
+  const [spreadJsonDownloaded, setSpreadJsonDownloaded] = useState(false);
+  const [showAnalysisMatrix, setShowAnalysisMatrix] = useState(false);
   /** Per-Sephirah (1–10), at most one L/R pair from the leftover deck once drawn */
   const [sephFlankEchoes, setSephFlankEchoes] = useState<Record<number, SephirahFlankEcho>>({});
   const layerRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -925,6 +957,22 @@ export default function Page() {
   const seedLocked = isSequential && step > 0 && (!manualSeedEnabled || step > 1);
   const completed = isSequential ? step === LAYERS.length : revealMode === "freestyle" && freestyleRevealedCount >= TOTAL_SPREAD_CARDS;
 
+  const spreadExportCards = useMemo(() => collectSpreadExportCards(drawn), [drawn]);
+
+  const spreadAnalysis = useMemo(() => analyzeSpread(spreadExportCards), [spreadExportCards]);
+
+  const pathResonances = useMemo(
+    () =>
+      detectPathResonances(
+        spreadExportCards.map((card) => ({
+          id: card.id,
+          name: card.name,
+          sephirah: card.sephirah
+        }))
+      ),
+    [spreadExportCards]
+  );
+
   const spreadExportJson = useMemo(
     () =>
       buildSpreadExportJson({
@@ -961,6 +1009,46 @@ export default function Page() {
       }
     }
   }, [spreadExportJson]);
+
+  const downloadSpreadJson = useCallback(() => {
+    const blob = new Blob([spreadExportJson], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = spreadExportFilename(spreadExportJson);
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setSpreadJsonDownloaded(true);
+    window.setTimeout(() => setSpreadJsonDownloaded(false), 2000);
+  }, [spreadExportJson]);
+
+  const spreadExportButtons = completed ? (
+    <div className="mt-1.5 space-y-1">
+      <div className="flex gap-1">
+        <button
+          type="button"
+          onClick={() => void copySpreadJson()}
+          className="spread-btn-go min-w-0 flex-1 rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.12em] sm:text-[11px]"
+        >
+          {spreadJsonCopied ? "Copied" : "Copy"}
+        </button>
+        <button
+          type="button"
+          onClick={downloadSpreadJson}
+          className="spread-btn-ghost min-w-0 flex-1 rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.12em] sm:text-[11px]"
+        >
+          {spreadJsonDownloaded ? "Saved" : "Download"}
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={() => setShowAnalysisMatrix(true)}
+        className="spread-btn-ghost w-full rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.12em] sm:text-[11px]"
+      >
+        Matrix
+      </button>
+    </div>
+  ) : null;
 
   const drawSephirahFlankEcho = useCallback(
     (sephirah: number) => {
@@ -1403,15 +1491,7 @@ export default function Page() {
               );
             })}
           </div>
-          {completed ? (
-            <button
-              type="button"
-              onClick={() => void copySpreadJson()}
-              className="spread-btn-go mt-1.5 w-full rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.12em] sm:text-[11px]"
-            >
-              {spreadJsonCopied ? "Copied" : "Copy"}
-            </button>
-          ) : null}
+          {spreadExportButtons}
         </div>
       ) : (
         <div
@@ -1441,15 +1521,7 @@ export default function Page() {
               );
             })}
           </div>
-          {completed ? (
-            <button
-              type="button"
-              onClick={() => void copySpreadJson()}
-              className="spread-btn-go mt-1.5 w-full rounded-md px-2 py-1 text-[10px] font-semibold tracking-[0.12em] sm:text-[11px]"
-            >
-              {spreadJsonCopied ? "Copied" : "Copy"}
-            </button>
-          ) : null}
+          {spreadExportButtons}
         </div>
       )}
       <div className={spread.shell}>
@@ -2163,6 +2235,30 @@ export default function Page() {
                 {selectedCard.astrology.dates ? <p className="min-w-0 leading-snug">Dates: {selectedCard.astrology.dates}</p> : null}
               </div>
             </div>
+          </div>
+        </SpreadDialog>
+      ) : null}
+
+      {showAnalysisMatrix && completed ? (
+        <SpreadDialog
+          aria-label="Spread analysis matrix"
+          z="help"
+          maxWidth="matrix"
+          onClose={() => setShowAnalysisMatrix(false)}
+        >
+          <div className={spread.modalHeader}>
+            <div>
+              <h3 className="spread-triad text-base font-semibold">Analysis Matrix</h3>
+              <p className="spread-hint mt-1 text-xs">パス隣接・元素尊厳・共鳴の構造マップ</p>
+            </div>
+            <ModalCloseButton onClick={() => setShowAnalysisMatrix(false)} />
+          </div>
+          <div className="mt-4">
+            <AnalysisMatrixView
+              cards={spreadExportCards}
+              analysis={spreadAnalysis}
+              pathResonances={pathResonances}
+            />
           </div>
         </SpreadDialog>
       ) : null}

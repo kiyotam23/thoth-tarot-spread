@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { CARD_INDEX } from "../constants/cards";
 import { detectPathResonances } from "./aspectEngine";
-import { analyzeSpread, type ExportCard } from "./spreadAnalysis";
+import { analyzeSpread, cardElement, type ExportCard } from "./spreadAnalysis";
 
 function exportCard(id: string, sephirah: number): ExportCard {
   const meta = CARD_INDEX[id]!;
@@ -141,5 +141,11 @@ assert.deepEqual(modality.counts, { Cardinal: 2, Fixed: 2, Mutable: 2 });
 assert.equal(modality.signCardCount, 6);
 assert.equal(modality.dominantModality, null);
 assert.deepEqual(modality.missing, []);
+
+// Mother-letter planetary majors carry element for census (Mem=Water, etc.)
+const neptuneOnly = analyzeSpread([exportCard("neptune", 8)]);
+assert.equal(neptuneOnly.census.elements.Water, 1, "The Hanged Man (Mem) counts as Water");
+assert.equal(cardElement(exportCard("neptune", 8)), "Water");
+assert.equal(cardElement(exportCard("sun", 10)), null, "non-mother planetary majors stay elementless");
 
 console.log("spreadAnalysis.test.ts: all assertions passed");

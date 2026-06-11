@@ -528,6 +528,14 @@ const PLANET_FOCUS = [
   }
 ] as const;
 
+// 3母字の大アルカナは惑星帰属だが、母字由来の元素を持つ(Aleph=Air, Mem=Water, Shin=Fire)。
+// 元素センサスに正しく数えさせるため element を補う。他の惑星 major は元素を持たない。
+const MOTHER_LETTER_ELEMENT: Record<string, string> = {
+  uranus: "Air",
+  neptune: "Water",
+  pluto: "Fire"
+};
+
 const COURT_SPAN_DATA = {
   "knight-wands": {
     sign: "Sagittarius",
@@ -833,7 +841,7 @@ PLANET_FOCUS.forEach((major) => {
     metal: major.metal,
     astrology: {
       sign: null,
-      element: null,
+      element: MOTHER_LETTER_ELEMENT[major.id] ?? null,
       planet: major.planet,
       numberPlanet: null,
       governingSign: major.governingSign,
