@@ -114,6 +114,29 @@ export type ModalityNote = {
   missing: string[];
 };
 
+export type DecanPhase = "initiation" | "culmination" | "completion";
+export type SignModality = "Cardinal" | "Fixed" | "Mutable";
+
+export type DecanPosition = {
+  cardId: string;
+  cardName: string;
+  sephirah: number;
+  sign: string;
+  decanIndex: 1 | 2 | 3;
+  phase: DecanPhase;
+  signModality: SignModality;
+  positionNote: string;
+};
+
+export type DecanRun = {
+  sign: string;
+  decansPresent: (1 | 2 | 3)[];
+  consecutive: boolean;
+  complete: boolean;
+  cards: { cardId: string; cardName: string; sephirah: number; decanIndex: 1 | 2 | 3 }[];
+  majorOfSameSignPresent: { cardId: string; cardName: string; sephirah: number } | null;
+};
+
 export type SpreadAnalysis = {
   pillars: PillarCensus;
   census: Census;
@@ -123,6 +146,8 @@ export type SpreadAnalysis = {
   majorPathLandings: MajorPathLanding[];
   resonanceClusters: ResonanceClusters;
   modalityNote: ModalityNote;
+  decanPositions: DecanPosition[];
+  decanRuns: DecanRun[];
 };
 
 const PILLAR_OF_SEPHIRAH: Record<number, "mercy" | "severity" | "equilibrium"> = {
@@ -235,6 +260,63 @@ function isMajorArcana(meta: ThothCardMeta): boolean {
 
 function isCourtRank(rank: string | null | undefined): boolean {
   return rank === "Knight" || rank === "Queen" || rank === "Prince" || rank === "Princess";
+}
+
+function isZodiacMajor(meta: ThothCardMeta): boolean {
+  return meta.suit === "Major Arcana (Zodiac)";
+}
+
+const DECAN_PHASE: Record<1 | 2 | 3, DecanPhase> = {
+  1: "initiation",
+  2: "culmination",
+  3: "completion"
+};
+
+const MODALITY_SEASON_LABEL: Record<SignModality, string> = {
+  Cardinal: "Cardinal=season-start",
+  Fixed: "Fixed=season-center",
+  Mutable: "Mutable=season-end"
+};
+
+function decanIndexOf(midAngle: number): 1 | 2 | 3 {
+  const within = midAngle % 30;
+  if (within < 10) return 1;
+  if (within < 20) return 2;
+  return 3;
+}
+
+function asSignModality(raw: string | null | undefined): SignModality | null {
+  if (raw === "Cardinal" || raw === "Fixed" || raw === "Mutable") return raw;
+  return null;
+}
+
+function buildPositionNote(
+  sign: string,
+  modality: SignModality,
+  decanIndex: 1 | 2 | 3,
+  phase: DecanPhase
+): string {
+  const base = `${sign}(${MODALITY_SEASON_LABEL[modality]}) decan ${decanIndex}(${phase})`;
+
+  if (modality === "Cardinal" && decanIndex === 1) {
+    return `${base} — the beginning of a beginning`;
+  }
+  if (modality === "Cardinal" && decanIndex === 3) {
+    return `${base} — the completion of a beginning`;
+  }
+  if (modality === "Fixed" && decanIndex === 2) {
+    return `${base} — the heart of the fixed`;
+  }
+  if (modality === "Mutable" && decanIndex === 3) {
+    return `${base} — the final dissolution before the next season`;
+  }
+  return base;
+}
+
+function isConsecutiveDecans(decans: (1 | 2 | 3)[]): boolean {
+  if (decans.length < 2) return false;
+  const sorted = [...decans].sort((a, b) => a - b);
+  return sorted[sorted.length - 1]! - sorted[0]! + 1 === sorted.length;
 }
 
 function metaFor(card: ExportCard): ThothCardMeta | undefined {
@@ -693,6 +775,98 @@ function computeResonanceClusters(cards: ExportCard[]): ResonanceClusters {
   };
 }
 
+function computeDecanPositions(cards: ExportCard[]): DecanPosition[] {
+  const positions: DecanPosition[] = [];
+
+  for (const card of cards) {
+    const meta = metaFor(card);
+    if (!meta || !isMinorArcana(meta)) continue;
+
+    const midAngle = meta.midAngle;
+    const sign = meta.astrology.sign ?? card.astrology?.sign;
+    const signModality = asSignModality(meta.astrology.modality ?? card.astrology?.modality);
+    if (midAngle == null || !sign || !signModality) continue;
+
+    const decanIndex = decanIndexOf(midAngle);
+    const phase = DECAN_PHASE[decanIndex];
+
+    positions.push({
+      cardId: card.id,
+      cardName: card.name,
+      sephirah: card.sephirah,
+      sign,
+      decanIndex,
+      phase,
+      signModality,
+      positionNote: buildPositionNote(sign, signModality, decanIndex, phase)
+    });
+  }
+
+  return positions;
+}
+
+function findZodiacMajorOfSign(
+  cards: ExportCard[],
+  sign: string
+): { cardId: string; cardName: string; sephirah: number } | null {
+  for (const card of cards) {
+    const meta = metaFor(card);
+    if (!meta || !isZodiacMajor(meta)) continue;
+    const majorSign = meta.astrology.sign ?? card.astrology?.sign;
+    if (majorSign !== sign) continue;
+    return { cardId: card.id, cardName: card.name, sephirah: card.sephirah };
+  }
+  return null;
+}
+
+function computeDecanRuns(cards: ExportCard[]): DecanRun[] {
+  const bySign = new Map<
+    string,
+    { cardId: string; cardName: string; sephirah: number; decanIndex: 1 | 2 | 3 }[]
+  >();
+
+  for (const card of cards) {
+    const meta = metaFor(card);
+    if (!meta || !isMinorArcana(meta)) continue;
+
+    const midAngle = meta.midAngle;
+    const sign = meta.astrology.sign ?? card.astrology?.sign;
+    if (midAngle == null || !sign) continue;
+
+    const decanIndex = decanIndexOf(midAngle);
+    const list = bySign.get(sign) ?? [];
+    list.push({
+      cardId: card.id,
+      cardName: card.name,
+      sephirah: card.sephirah,
+      decanIndex
+    });
+    bySign.set(sign, list);
+  }
+
+  const runs: DecanRun[] = [];
+
+  for (const sign of Array.from(bySign.keys()).sort()) {
+    const group = bySign.get(sign)!;
+    if (group.length < 2) continue;
+
+    const decansPresent = Array.from(new Set(group.map((c) => c.decanIndex))).sort(
+      (a, b) => a - b
+    ) as (1 | 2 | 3)[];
+
+    runs.push({
+      sign,
+      decansPresent,
+      consecutive: isConsecutiveDecans(decansPresent),
+      complete: decansPresent.length === 3 && decansPresent[0] === 1 && decansPresent[2] === 3,
+      cards: group,
+      majorOfSameSignPresent: findZodiacMajorOfSign(cards, sign)
+    });
+  }
+
+  return runs.sort((a, b) => a.sign.localeCompare(b.sign));
+}
+
 function computeModalityNote(cards: ExportCard[]): ModalityNote {
   const counts = { Cardinal: 0, Fixed: 0, Mutable: 0 };
   let signCardCount = 0;
@@ -726,7 +900,9 @@ export function analyzeSpread(cards: ExportCard[]): SpreadAnalysis {
     pathMatrix: computePathMatrix(cards),
     majorPathLandings: computeMajorPathLandings(cards),
     resonanceClusters: computeResonanceClusters(cards),
-    modalityNote: computeModalityNote(cards)
+    modalityNote: computeModalityNote(cards),
+    decanPositions: computeDecanPositions(cards),
+    decanRuns: computeDecanRuns(cards)
   };
 }
 

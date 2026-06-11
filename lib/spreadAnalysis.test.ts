@@ -148,4 +148,85 @@ assert.equal(neptuneOnly.census.elements.Water, 1, "The Hanged Man (Mem) counts 
 assert.equal(cardElement(exportCard("neptune", 8)), "Water");
 assert.equal(cardElement(exportCard("sun", 10)), null, "non-mother planetary majors stay elementless");
 
+// decanPositions: 4 of Wands = Aries decan 3 (completion of a beginning)
+const fourWands = analyzeSpread([exportCard("4-wands", 4)]).decanPositions[0]!;
+assert.equal(fourWands.sign, "Aries");
+assert.equal(fourWands.decanIndex, 3);
+assert.equal(fourWands.phase, "completion");
+assert.equal(fourWands.signModality, "Cardinal");
+assert.ok(
+  fourWands.positionNote.includes("completion of a beginning"),
+  `expected completion-of-beginning note, got: ${fourWands.positionNote}`
+);
+
+// decanPositions: 2 of Wands = Aries decan 1 (initiation)
+const twoWands = analyzeSpread([exportCard("2-wands", 2)]).decanPositions[0]!;
+assert.equal(twoWands.sign, "Aries");
+assert.equal(twoWands.decanIndex, 1);
+assert.equal(twoWands.phase, "initiation");
+assert.ok(twoWands.positionNote.includes("beginning of a beginning"));
+
+// decanRuns: 2, 3, 4 of Wands → full Aries decan run
+const wandsRunSpread: ExportCard[] = [
+  exportCard("ace-wands", 1),
+  exportCard("princess-wands", 2),
+  exportCard("2-wands", 3),
+  exportCard("3-wands", 4),
+  exportCard("4-wands", 5),
+  exportCard("knight-swords", 6),
+  exportCard("prince-swords", 7),
+  exportCard("cancer-chariot", 8),
+  exportCard("scorpio-death", 9),
+  exportCard("moon", 10)
+];
+const wandsRun = analyzeSpread(wandsRunSpread);
+assert.equal(wandsRun.decanPositions.length, 3);
+const ariesRun = wandsRun.decanRuns.find((r) => r.sign === "Aries");
+assert.ok(ariesRun, "expected Aries decan run");
+assert.deepEqual(ariesRun!.decansPresent, [1, 2, 3]);
+assert.equal(ariesRun!.consecutive, true);
+assert.equal(ariesRun!.complete, true);
+assert.equal(ariesRun!.cards.length, 3);
+
+// decanRuns: Aries minors + Emperor → majorOfSameSignPresent set, not in cards
+const ariesWithEmperor: ExportCard[] = [
+  exportCard("2-wands", 1),
+  exportCard("3-wands", 2),
+  exportCard("aries-emperor", 3),
+  exportCard("knight-swords", 4),
+  exportCard("prince-swords", 5),
+  exportCard("cancer-chariot", 6),
+  exportCard("5-cups", 7),
+  exportCard("4-cups", 8),
+  exportCard("7-wands", 9),
+  exportCard("moon", 10)
+];
+const ariesEmperorRun = analyzeSpread(ariesWithEmperor).decanRuns.find((r) => r.sign === "Aries");
+assert.ok(ariesEmperorRun);
+assert.equal(ariesEmperorRun!.majorOfSameSignPresent?.cardId, "aries-emperor");
+assert.ok(!ariesEmperorRun!.cards.some((c) => c.cardId === "aries-emperor"));
+
+// decanRuns: single minor per sign → empty
+const singleMinor = analyzeSpread([
+  exportCard("2-wands", 1),
+  exportCard("5-cups", 2),
+  exportCard("8-swords", 3),
+  exportCard("ace-wands", 4),
+  exportCard("princess-wands", 5),
+  exportCard("knight-swords", 6),
+  exportCard("prince-swords", 7),
+  exportCard("cancer-chariot", 8),
+  exportCard("7-wands", 9),
+  exportCard("moon", 10)
+]);
+assert.equal(singleMinor.decanRuns.length, 0);
+assert.equal(singleMinor.decanPositions.length, 4);
+
+// decanRuns: non-consecutive gap (1 and 3 only)
+const gapRun = analyzeSpread([exportCard("2-wands", 1), exportCard("4-wands", 2)]).decanRuns[0]!;
+assert.equal(gapRun.sign, "Aries");
+assert.deepEqual(gapRun.decansPresent, [1, 3]);
+assert.equal(gapRun.consecutive, false);
+assert.equal(gapRun.complete, false);
+
 console.log("spreadAnalysis.test.ts: all assertions passed");
